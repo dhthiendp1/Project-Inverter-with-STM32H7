@@ -33,11 +33,11 @@ This project is an inverter control system designed for the Texas Instruments TM
 
 ```
 .
-- **feat**  	# Thêm một chức năng mới.
-- **fix**	    # Sửa lỗi Sửa một lỗi đang tồn tại.
-- **refactor**	# Tái cấu trúc: Dọn dẹp, tối ưu cấu trúc code mà không thay đổi hành vi.	Đổi tên biến, tách hàm lớn thành hàm nhỏ.
-- **docs**	    # Tài liệu: Thêm/sửa đổi file tài liệu (README.md, User Manual).
-- **style**	    # Định dạng code: Sửa lỗi định dạng (dấu cách, dấu chấm phẩy, xuống dòng).
-- **test**	    # Thêm/sửa code khi test
-- **chore**	    # Tác vụ khác: Cập nhật công cụ, cấu hình Git, không liên quan đến code chức năng. Cập nhật file .gitignore, sửa file dự án CCS.
+- feat  	# Thêm một chức năng mới.
+- fix       # Sửa lỗi Sửa một lỗi đang tồn tại.
+- refactor	# Tái cấu trúc: Dọn dẹp, tối ưu cấu trúc code mà không thay đổi hành vi. Đổi tên biến, tách hàm lớn thành hàm nhỏ.
+- docs      # Tài liệu: Thêm/sửa đổi file tài liệu (README.md, User Manual).
+- style	    # Định dạng code: Sửa lỗi định dạng (dấu cách, dấu chấm phẩy, xuống dòng).
+- test      # Thêm/sửa code khi test
+- chore     # Tác vụ khác: Cập nhật công cụ, cấu hình Git, không liên quan đến code chức năng. Cập nhật file .gitignore, sửa file dự án CCS.
 ```
