@@ -45,3 +45,10 @@ build/
 # Generated documentation
 doc/html/
 doc/latex/
+
+
+.vscode/*
+
+!/.vscode/tasks.json
+!/.vscode/launch.json
+!/.vscode/extensions.json
