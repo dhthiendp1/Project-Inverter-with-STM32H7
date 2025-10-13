@@ -1,0 +1,47 @@
+# Code Composer Studio (CCS) build artifacts
+Debug/
+Release/
+*.out
+*.map
+*.lst
+*.hex
+*.obj
+*.pp
+*.asm
+*.opt
+
+# CCS specific files
+.ccsproject
+.cproject
+.project
+.settings/
+targetConfigs/
+*.ccxml
+
+# Temporary files
+*.tmp
+*.bak
+*~
+*.swp
+*.swo
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Build outputs
+build/
+*.d
+*.dep
+
+# IAR Workbench (alternative IDE)
+*.eww
+*.ewd
+*.ewp
+*.dni
+*.wsdt
+*.sfr
+
+# Generated documentation
+doc/html/
+doc/latex/
