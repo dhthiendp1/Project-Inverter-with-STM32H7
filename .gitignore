@@ -9,7 +9,6 @@ Release/
 *.pp
 *.asm
 *.opt
-*.map
 
 # CCS specific files
 .ccsproject
@@ -41,7 +40,6 @@ build/
 *.ewp
 *.dni
 *.wsdt
-*.dep
 *.sfr
 
 # Generated documentation
