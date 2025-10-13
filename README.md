@@ -19,7 +19,7 @@ This project is an inverter control system designed for the Texas Instruments TM
 └── README.md      # This file
 ```
 
-### Directory Details
+## Directory Details
 
 ```
 .
@@ -29,7 +29,7 @@ This project is an inverter control system designed for the Texas Instruments TM
 - **doc/**:     # Tài liệu
 - **config/**:  # Tệp .cmd hệ thống DSP
 ```
-#### Summarry Commit
+## Summarry Commit
 
 ```
 .
