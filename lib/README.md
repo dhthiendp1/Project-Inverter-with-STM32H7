@@ -1,6 +1,6 @@
 # Library Directory
 
-This directory contains library files and external dependencies for the DSP F28335 project.
+Thư mục này chứa các tệp thư viện và các phụ thuộc bên ngoài
 
 ## Contents
 - TI DSP libraries
