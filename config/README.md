@@ -7,4 +7,3 @@ This directory contains configuration files for the DSP F28335 project.
 - Memory configuration files
 - Project settings
 - Build configurations
-- CCS project files (when applicable)

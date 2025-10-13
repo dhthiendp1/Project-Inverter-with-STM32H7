@@ -4,6 +4,5 @@ This directory contains library files and external dependencies for the DSP F283
 
 ## Contents
 - TI DSP libraries
-- Math libraries (IQmath, FPU libraries)
+- Math libraries (math.h, ...)
 - Third-party libraries
-- Pre-compiled object files (.obj, .lib)
