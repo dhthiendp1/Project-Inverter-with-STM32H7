@@ -21,14 +21,18 @@ This project is an inverter control system designed for the Texas Instruments TM
 
 ### Directory Details
 
+```
+.
 - **src/**:     # Chứa file .c
 - **include/**: # Chứa file .h tự định nghĩa.
 - **lib/**:     # Thư viện bên thứ 3 (math.h, lib từ DSP).
 - **doc/**:     # Tài liệu
 - **config/**:  # Tệp .cmd hệ thống DSP
-
+```
 #### Summarry Commit
 
+```
+.
 - **feat**  	# Thêm một chức năng mới.
 - **fix**	    # Sửa lỗi Sửa một lỗi đang tồn tại.
 - **refactor**	# Tái cấu trúc: Dọn dẹp, tối ưu cấu trúc code mà không thay đổi hành vi.	Đổi tên biến, tách hàm lớn thành hàm nhỏ.
@@ -36,3 +40,4 @@ This project is an inverter control system designed for the Texas Instruments TM
 - **style**	    # Định dạng code: Sửa lỗi định dạng (dấu cách, dấu chấm phẩy, xuống dòng).
 - **test**	    # Thêm/sửa code khi test
 - **chore**	    # Tác vụ khác: Cập nhật công cụ, cấu hình Git, không liên quan đến code chức năng. Cập nhật file .gitignore, sửa file dự án CCS.
+```
