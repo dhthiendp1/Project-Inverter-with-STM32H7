@@ -27,28 +27,12 @@ This project is an inverter control system designed for the Texas Instruments TM
 - **doc/**: Project documentation including design specs, schematics, and user manuals.
 - **config/**: Configuration files such as linker command files (.cmd) and memory configurations.
 
-## Getting Started
+#### Summarry Commit
 
-### Prerequisites
-- Code Composer Studio (CCS) v10.0 or higher
-- TMS320F28335 controlCARD or custom hardware
-- C2000Ware SDK (optional, for additional libraries and examples)
-
-### Building the Project
-1. Open Code Composer Studio
-2. Import this project into CCS workspace
-3. Configure the build settings for F28335 target
-4. Build the project (Project → Build All)
-5. Load and run on the target hardware
-
-## Development
-
-This project is structured to facilitate development of inverter control algorithms for the F28335 DSP platform.
-
-## License
-
-[Add license information here]
-
-## Contributors
-
-[Add contributor information here]
+- **feat**  	Tính năng mới: Thêm một chức năng mới.
+- **fix**	    Sửa lỗi: Sửa một lỗi đang tồn tại.
+- **refactor**	Tái cấu trúc: Dọn dẹp, tối ưu cấu trúc code mà không thay đổi hành vi.	Đổi tên biến, tách hàm lớn thành hàm nhỏ.
+- **docs**	    Tài liệu: Thêm/sửa đổi file tài liệu (README.md, User Manual).
+- **style**	    Định dạng code: Sửa lỗi định dạng (dấu cách, dấu chấm phẩy, xuống dòng).
+- **test**	    Thêm/sửa code test
+- **chore**	    Tác vụ khác: Cập nhật công cụ, cấu hình Git, không liên quan đến code chức năng. Cập nhật file .gitignore, sửa file dự án CCS.
