@@ -1,6 +1,6 @@
 # Configuration Directory
 
-This directory contains configuration files for the DSP F28335 project.
+This directory contains configuration files
 
 ## Contents
 - Linker command files (.cmd)

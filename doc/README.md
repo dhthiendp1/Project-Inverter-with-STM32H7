@@ -1,6 +1,6 @@
 # Documentation Directory
 
-This directory contains project documentation for the DSP F28335 inverter project.
+This directory contains project documentation
 
 ## Contents
 - Design specifications
