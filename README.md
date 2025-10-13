@@ -5,7 +5,7 @@ This project is an inverter control system designed for the Texas Instruments TM
 
 ## Hardware Platform
 - **Microcontroller**: TMS320F28335 (C2000 DSP)
-- **Development Environment**: Code Composer Studio (CCS)
+- **Development Environment**: Code Composer Studio 12.0 (CCS)
 
 ## Project Structure
 
