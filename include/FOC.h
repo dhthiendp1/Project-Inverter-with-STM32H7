@@ -11,5 +11,3 @@ void Calculate_Clark_Back();
 void Calculate_Polar_Form(Polar_Form *Output, const Output_Park_Go *Input);
 void Time_Calculator_Update(Time_Calculator *Output, const Polar_Form *Input);
 void SPWM_Controller_Update(SPWM_Controller *Output, const Time_Calculator* Input);
-
-a

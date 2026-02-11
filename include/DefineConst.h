@@ -15,7 +15,7 @@ typedef struct {
     float Saturation_upper;
     float Saturation_lower;
     float integral_value;
-    float Ki_Ts; // Tính toán Ki*Ts để tối ưu hoá hàm Update
+    float Ki_Ts; 
     float output;
 } PI_Speed_Controller;
 
@@ -28,7 +28,7 @@ typedef struct {
     float Saturation_upper;
     float Saturation_lower;
     float integral_value;
-    float Ki_Ts; // Tính toán Ki*Ts để tối ưu hoá hàm Update
+    float Ki_Ts; 
     float Vq_output;
 } PI_Iq_ctrl;
 
@@ -41,7 +41,7 @@ typedef struct {
     float Saturation_upper;
     float Saturation_lower;
     float integral_value;
-    float Ki_Ts; // Tính toán Ki*Ts để tối ưu hoá hàm Update
+    float Ki_Ts;
     float Vd_output;
 } PI_Id_ctrl;
 
@@ -81,5 +81,3 @@ void PI_Id_ctrl_Init(PI_Id_ctrl *pointer_Id_ctrl);
 void Park_Go_Init(Output_Park_Go *pointer_Park_Go);
 void Polar_Form_Init(Polar_Form *pointer_Polar_Form);
 void Time_Calculator_Init(Time_Calculator *pointer_Time_Calculator);
-
-endif
