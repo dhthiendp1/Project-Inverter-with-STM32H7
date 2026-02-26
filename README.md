@@ -1,11 +1,13 @@
-# Project-Inverter-with-CCS-C2000
+# Project-Inverter-with-CCS-C2000 & STM32H732ZGT6
 
 ## Overview
 This project is an inverter control system designed for the Texas Instruments TMS320F28335 DSP microcontroller, developed using Code Composer Studio (CCS).
+And Core STM32H732ZGT6, developed using CubeMX
 
 ## Hardware Platform
 - **Microcontroller**: TMS320F28335 (C2000 DSP)
 - **Development Environment**: Code Composer Studio 12.0 (CCS)
+- **Microcontroller**: STM32H732ZGT6
 
 ## Project Structure
 
