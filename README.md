@@ -1,10 +1,11 @@
 # Project-Inverter-with-STM32H7
 
 ## Overview
-This project is an inverter control system designed for the Core STM32H732ZGT6, developed using CubeMX
+This project is an inverter control system designed for the Core STM32H732ZGT6.
 
 ## Hardware Platform
 - **Microcontroller**: STM32H732ZGT6
+-  **Developed**: CubeMX, CubeIDE, CubePrograming 
 
 ## Project Structure
 
