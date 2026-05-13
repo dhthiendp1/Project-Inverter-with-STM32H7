@@ -3,10 +3,11 @@ import os
 import json
 import numpy as np
 import pyqtgraph as pg
+import zmq
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem,
                              QHeaderView, QComboBox, QSplitter, QPushButton, QCheckBox, QFileDialog, QMessageBox)
-from PyQt6.QtCore import Qt, QUrl, pyqtSlot, QObject
+from PyQt6.QtCore import Qt, QUrl, pyqtSlot, QObject, QThread, pyqtSignal
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebChannel import QWebChannel
 

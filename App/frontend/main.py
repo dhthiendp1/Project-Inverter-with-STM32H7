@@ -12,7 +12,7 @@ class ZmqReceiverThread(QThread):
         context = zmq.Context()
         subscriber = context.socket(zmq.SUB)
         subscriber.connect("tcp://127.0.0.1:5555")
-        subscriber.setsockopt_string(zmq.SUBSCRIBE, "") # Lắng nghe mọi luồng
+        subscriber.setsockopt_string(zmq.SUBSCRIBE, "")
         print("[Frontend] ZMQ Subscriber connected.")
 
         while not self.isInterruptionRequested():

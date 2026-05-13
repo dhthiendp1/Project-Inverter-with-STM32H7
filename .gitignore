@@ -48,6 +48,8 @@ doc/latex/
 
 .vscode/
 *.json
+*.vsidx
+*.vs
 App/.vs/App.slnx/FileContentIndex/0a01844b-0144-428a-b211-2463716bb7c9.vsidx
 App/.vs/App.slnx/FileContentIndex/b547a180-3bde-420f-9f76-b3a0676be5d6.vsidx
 App/.vs/App.slnx/FileContentIndex/ce25bf33-bdff-4fe0-ab9c-59e14b1298ae.vsidx
@@ -63,3 +65,11 @@ App/backend/.vs/backend.slnx/FileContentIndex/d24c3ebf-966c-45a3-bd2d-8bfeaed29c
 App/backend/.vs/backend.slnx/FileContentIndex/ed92ea7e-2937-4b9e-9828-9db02e9d9d03.vsidx
 App/backend/.vs/backend.slnx/v18/.wsuo
 App/backend/.vs/backend.slnx/v18/Browse.VC.db
+App/backend/.vs/slnx.sqlite
+App/backend/.vs/backend.slnx/v18/ipch/AutoPCH/d8b290fa8bfba429/STLINKREADER.ipch
+App/backend/.vs/backend.slnx/v18/ipch/AutoPCH/3b2bb2296b0e315c/MAIN.ipch
+App/backend/.vs/backend.slnx/v18/Browse.VC.db-wal
+App/backend/.vs/backend.slnx/FileContentIndex/0f3e2cfa-b0b0-49fc-9d79-d75491bafd9d.vsidx
+App/backend/.vs/backend.slnx/FileContentIndex/0b8bfd1a-ad54-4976-91b3-e3de4b499e31.vsidx
+App/backend/.vs/slnx.sqlite
+App/backend/.vs/backend.slnx/v18/Browse.VC.db-wal
