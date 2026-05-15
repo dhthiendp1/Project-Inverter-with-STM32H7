@@ -92,7 +92,7 @@
         </div>
 
         <div class="pane pane-tr">
-            <div class="pane-header"><span>ELF EXPLORER</span><button class="btn" style="background:#d97706; padding: 4px 8px; font-size:10px;" onclick="refreshElf()">↻ REFRESH</button></div>
+            <div class="pane-header"><span>ELF EXPLORER</span><button class="btn" style="background:#d97706; padding: 4px 8px; font-size:10px;" onclick="if(backend) backend.js_load_elf()">📂 CHỌN FILE ELF</button></div>
             <div class="pane-content" style="padding:0;">
                 <div style="font-size:10px; color:#888; padding:5px 10px;">Gán vào: <b id="add-target-title" style="color:white">Chưa chọn khối</b></div>
                 <div class="table-container">

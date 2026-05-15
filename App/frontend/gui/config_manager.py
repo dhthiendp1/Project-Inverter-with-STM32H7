@@ -33,3 +33,26 @@ def remove_var_from_block(mapping_data, block_name, var_name):
         mapping_data[block_name] = [v for v in mapping_data[block_name] if v['id'] != var_name]
         save_mapping(mapping_data)
     return mapping_data
+
+def sync_addresses_with_elf(mapping_data, elf_symbols):
+    """
+    Quét qua các biến đã lưu trong block_mapping.json.
+    Nếu biến đó có mặt trong file ELF mới, cập nhật lại địa chỉ RAM mới nhất.
+    """
+    updated = False
+    for block_name, vars_list in mapping_data.items():
+        for v in vars_list:
+            var_name = v['id']
+            # Nếu biến này tồn tại trong file ELF vừa load
+            if var_name in elf_symbols:
+                new_addr = elf_symbols[var_name]['addr']
+                # Nếu địa chỉ RAM bị thay đổi so với lần trước
+                if v['addr'] != new_addr:
+                    v['addr'] = new_addr
+                    updated = True
+
+    # Nếu có sự thay đổi, lưu đè lại file json
+    if updated:
+        save_mapping(mapping_data)
+
+    return mapping_data

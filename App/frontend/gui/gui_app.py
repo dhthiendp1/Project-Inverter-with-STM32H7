@@ -7,12 +7,13 @@ import zmq
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem,
                              QHeaderView, QComboBox, QSplitter, QPushButton, QCheckBox, QFileDialog, QMessageBox)
-from PyQt6.QtCore import Qt, QUrl, pyqtSlot, QObject, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QUrl, pyqtSlot, QObject, QThread, pyqtSignal, QTimer
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebChannel import QWebChannel
+from elftools.elf.elffile import ELFFile
+from elftools.elf.sections import SymbolTableSection
 
 import config_manager
-
 
 class PlotWindow(QMainWindow):
     def __init__(self):
@@ -328,15 +329,24 @@ class PlotWindow(QMainWindow):
 
     # API CHO BACKEND: Đẩy dữ liệu vào đồ thị
     def set_real_data(self, x_array, data_dict):
-        """
-        Backend gọi hàm này để cập nhật toàn bộ đồ thị.
-        x_array: numpy array chứa trục thời gian
-        data_dict: dict dạng {'I_a': y_array_1, 'I_b': y_array_2}
-        """
         if self.is_paused: return
+
         for var_name, info in self.curves.items():
             if var_name in data_dict:
-                info['curve'].setData(x_array, data_dict[var_name])
+                y_array = data_dict[var_name]
+                min_len = min(len(x_array), len(y_array))
+
+                if min_len > 1:
+                    x_plot = x_array[-min_len:]
+                    y_plot = y_array[-min_len:]
+
+                    # === CHÈN DÒNG PRINT NÀY VÀO ĐỂ BẮT BỆNH ===
+                    print(
+                        f"[{var_name}] Đang vẽ {min_len} điểm | X (Thời gian): {x_plot[0]:.2f} -> {x_plot[-1]:.2f} | Y: {y_plot[-1]}")
+
+                    info['curve'].setZValue(10)
+                    info['curve'].setData(x=x_plot, y=y_plot)
+                    self.plots[info['p_idx']].enableAutoRange(axis='y', enable=True)
 
 
 class WebBridge(QObject):
@@ -344,18 +354,53 @@ class WebBridge(QObject):
         super().__init__()
         self.main_app = main_app
 
+    def parse_elf_file_real(self, file_path):
+        symbols_dict = {}
+        try:
+            with open(file_path, 'rb') as f:
+                elffile = ELFFile(f)
+                # Quét qua các phân vùng để tìm Bảng Symbol
+                for section in elffile.iter_sections():
+                    if isinstance(section, SymbolTableSection):
+                        for symbol in section.iter_symbols():
+                            # Chỉ lọc lấy các biến Toàn cục (Global Object)
+                            if symbol['st_info']['type'] == 'STT_OBJECT' and symbol['st_size'] > 0:
+                                var_name = symbol.name
+                                var_addr = hex(symbol['st_value'])
+                                # Khởi tạo mặc định là float32, bạn có thể đổi trên giao diện sau
+                                symbols_dict[var_name] = {"addr": var_addr, "type": "float32"}
+        except Exception as e:
+            print(f"Lỗi đọc file ELF: {e}")
+        return symbols_dict
+
     @pyqtSlot()
     def js_request_sync(self):
         json_str = json.dumps(self.main_app.mapping_data)
         self.main_app.web.page().runJavaScript(f"syncConfig({json_str});")
 
     @pyqtSlot()
-    def js_refresh_elf(self):
-        """ NƠI TÍCH HỢP ĐỌC FILE ELF THỰC TẾ BẰNG PYELFTOOLS """
-        if self.main_app.app_state == 'offline': return
-        # TODO: Gọi hàm đọc ELF thực tế tại đây
-        # elf_symbols = read_elf_real("path/to/firmware.elf")
-        pass
+    def js_load_elf(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self.main_app,
+            "Chọn file Firmware ELF",
+            "",
+            "ELF Files (*.elf *.out);;All Files (*)"
+        )
+
+        if file_path:
+            # Gọi hàm đọc ELF thật
+            elf_symbols = self.parse_elf_file_real(file_path)
+
+            if not elf_symbols:
+                QMessageBox.warning(self.main_app, "Lỗi", "Không tìm thấy biến toàn cục nào trong file ELF này.")
+                return
+
+            self.main_app.mapping_data = config_manager.sync_addresses_with_elf(self.main_app.mapping_data, elf_symbols)
+            elf_json = json.dumps(elf_symbols)
+            self.main_app.web.page().runJavaScript(f"syncElf({elf_json});")
+            self.js_request_sync()
+            QMessageBox.information(self.main_app, "Thành công",
+                                    f"Đã nạp file ELF:\n{os.path.basename(file_path)}\nTìm thấy {len(elf_symbols)} biến.")
 
     @pyqtSlot(str, str, str, str)
     def js_save_mapping(self, block, var_name, var_addr, var_type):
@@ -413,11 +458,83 @@ class MainApp(QMainWindow):
         self.web.setUrl(QUrl.fromLocalFile(path))
         self.setCentralWidget(self.web)
 
-        # TODO: Khởi tạo luồng (Thread) nhận dữ liệu từ STM32 tại đây
-        # self.serial_thread = SerialReaderThread()
-        # self.serial_thread.new_data_signal.connect(self.plot_win.set_real_data)
+        # BỘ NHỚ ĐỆM ĐỒ THỊ
+        self.max_points = 500
+        self.x_history = []
+        self.y_history = {}
 
+        # 1. KẾT NỐI ZMQ TRỰC TIẾP (Không dùng QThread nữa)
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.SUB)
+        self.socket.connect("tcp://127.0.0.1:5556")
+        self.socket.setsockopt_string(zmq.SUBSCRIBE, "DATA")
 
+        # 2. BỘ ĐỊNH THỜI VẼ ĐỒ THỊ 30 FPS
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.poll_and_update_gui)
+        self.timer.start(30)  # Cứ 30ms chạy 1 lần
+
+    def poll_and_update_gui(self):
+        has_new_data = False
+        latest_payload = None
+
+        # 1. HÚT DỮ LIỆU
+        while True:
+            try:
+                topic = self.socket.recv_string(flags=zmq.NOBLOCK)
+                payload = self.socket.recv_json(flags=zmq.NOBLOCK)
+                latest_payload = payload
+                has_new_data = True
+
+                t = float(payload['timestamp'])
+                data_dict = payload['data']
+
+                self.x_history.append(t)
+                if len(self.x_history) > self.max_points:
+                    self.x_history.pop(0)
+
+                for var_name, val in data_dict.items():
+                    if var_name not in self.y_history:
+                        self.y_history[var_name] = []
+                    self.y_history[var_name].append(float(val))
+                    if len(self.y_history[var_name]) > self.max_points:
+                        self.y_history[var_name].pop(0)
+
+            except zmq.Again:
+                break  # Đã hút hết dữ liệu
+            except Exception as e:
+                print(f"\n[DEBUG LỖI MẠNG ZMQ]: {e}")
+                break
+
+        # 2. XỬ LÝ VÀ IN LOG DEBUG NẾU CÓ DỮ LIỆU
+        if has_new_data and latest_payload:
+            # --- KHU VỰC IN LOG RA TERMINAL ---
+            print(f"\n[DEBUG] Đã nhận Data: {latest_payload['data']}")
+
+            danh_sach_duong_ve = list(self.plot_win.curves.keys())
+            print(f"[DEBUG] Đồ thị đang được cài để vẽ các biến này: {danh_sach_duong_ve}")
+
+            if len(danh_sach_duong_ve) == 0:
+                print(
+                    " >>> [CẢNH BÁO]: BẠN CHƯA GÁN 'TARGET'. HÃY NHÌN SANG BẢNG BÊN PHẢI GIAO DIỆN, CHỌN TARGET LÀ 'SCOPE 1' <<<")
+            # -----------------------------------
+
+            if self.app_state == 'offline':
+                self.app_state = 'realtime'
+                self.web.page().runJavaScript("if(typeof setAppMode === 'function') setAppMode('realtime');")
+
+            js_data = json.dumps(latest_payload['data'])
+            self.web.page().runJavaScript(
+                f"if(typeof updateRealtimeData === 'function') updateRealtimeData({js_data});")
+
+            if not self.plot_win.is_paused:
+                plot_dict = {}
+                for var_name in latest_payload['data'].keys():
+                    if var_name in self.y_history:
+                        plot_dict[var_name] = np.array(self.y_history[var_name], dtype=float)
+
+                if self.x_history:
+                    self.plot_win.set_real_data(np.array(self.x_history, dtype=float), plot_dict)
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")

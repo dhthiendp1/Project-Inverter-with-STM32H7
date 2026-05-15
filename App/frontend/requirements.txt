@@ -2,3 +2,4 @@ PyQt6
 pyqtgraph
 pyzmq
 numpy
+pyocd

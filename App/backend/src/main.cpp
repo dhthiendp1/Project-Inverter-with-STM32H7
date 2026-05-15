@@ -2,67 +2,68 @@
 #include <thread>
 #include <chrono>
 #include <fstream>
+#include <cmath>
 #include <nlohmann/json.hpp>
-#include "IPC/ZmqPublisher.hpp"
-#include "Hardware/StlinkReader.hpp"
+#include "StlinkReader.hpp"
+#include "ZmqPublisher.hpp"
+#include <filesystem>
 
 using json = nlohmann::json;
 
-// Hàm hỗ trợ đọc file mapping của Python tạo ra
-std::vector<FOC::Core::VariableConfig> loadVariablesFromJson(const std::string& filepath) {
-    std::vector<FOC::Core::VariableConfig> vars;
-    std::ifstream f(filepath);
-    if (!f.is_open()) return vars;
-
-    json data = json::parse(f);
-    for (auto& [block_name, var_list] : data.items()) {
-        for (auto& v : var_list) {
-            FOC::Core::VariableConfig cfg;
-            cfg.name = v["id"];
-            cfg.address = std::stoul(v["addr"].get<std::string>(), nullptr, 16); // Hex string to uint32
-            cfg.type = v["type"];
-            vars.push_back(cfg);
-        }
-    }
-    return vars;
-}
-
 int main() {
-    std::cout << "=== FOC SYSTEM ARCHITECT BACKEND (C++) ===" << std::endl;
+    std::cout << "=== FOC SYSTEM BACKEND (MOCK MODE) ===" << std::endl;
 
-    FOC::IPC::ZmqPublisher zmq_pub("tcp://127.0.0.1:5555");
-    if (!zmq_pub.initialize()) return -1;
+    FOC::StlinkReader reader;
+    FOC::ZmqPublisher pub("tcp://127.0.0.1:5556");
 
-    FOC::Hardware::StlinkReader stlink;
-
-    // Liên tục thử kết nối cho đến khi cắm cáp
-    while (!stlink.connect()) {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+    if (!reader.connect() || !pub.init()) {
+        std::cerr << "Initialization Failed!" << std::endl;
+        return -1;
     }
 
-    // Đọc file config (Phải chạy Frontend Python trước để tạo file này)
-    auto vars = loadVariablesFromJson("../frontend/block_mapping.json");
-    stlink.setTargetVariables(vars);
+    std::vector<FOC::VariableConfig> active_vars;
 
-    std::cout << "Bat dau stream du lieu... Nhấn Ctrl+C de dung." << std::endl;
+    // --- BẮT C++ IN RA THƯ MỤC NÓ ĐANG TÌM FILE ---
+    std::cout << "\n==============================================" << std::endl;
+    std::cout << "[QUAN TRONG] C++ dang tim file JSON tai thu muc:" << std::endl;
+    std::cout << " ---> " << std::filesystem::current_path() << std::endl;
+    std::cout << "==============================================\n" << std::endl;
+
+    std::ifstream f("block_mapping.json");
+    if (f.is_open()) {
+        json data = json::parse(f);
+        for (auto& [block, vars] : data.items()) {
+            for (auto& v : vars) {
+                active_vars.push_back({
+                    v["id"],
+                    std::stoul(v["addr"].get<std::string>(), nullptr, 16),
+                    v["type"]
+                    });
+            }
+        }
+        std::cout << "[Backend] Thanh cong! Da load " << active_vars.size() << " bien de gui di." << std::endl;
+    }
+    else {
+        std::cerr << "[LOI] KHONG TIM THAY FILE block_mapping.json!" << std::endl;
+    }
 
     auto start_time = std::chrono::high_resolution_clock::now();
 
-    // Vòng lặp Real-time
     while (true) {
-        auto current_time = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> elapsed = current_time - start_time;
+        auto now = std::chrono::high_resolution_clock::now();
+        double elapsed = std::chrono::duration<double>(now - start_time).count();
 
-        // Đọc dữ liệu từ RAM STM32
-        FOC::Core::DataFrame frame = stlink.readFrame();
-        frame.timestamp = elapsed.count();
+        FOC::DataFrame frame;
+        frame.timestamp = elapsed;
 
-        // Bắn sang Python
-        zmq_pub.publishData(frame);
+        for (auto& var : active_vars) {
+            float val = reader.readMemory(var.address, var.type);
+            //val += static_cast<float>(sin(elapsed * 5.0 + var.address)) * 2.0f;
+            frame.data[var.id] = val;
+        }
 
-        // Chạy ở tốc độ ~1kHz (1ms) - Có thể giảm xuống microseconds nếu ZMQ cấu hình tốt
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        pub.sendData(frame);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-
     return 0;
 }
