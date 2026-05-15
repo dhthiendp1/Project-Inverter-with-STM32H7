@@ -47,27 +47,38 @@ int main() {
         std::cerr << "[LOI] KHONG TIM THAY FILE block_mapping.json!" << std::endl;
     }
 
-    zmq::context_t cmd_context(1);
-    zmq::socket_t command_receiver(cmd_context, zmq::socket_type::sub);
-    command_receiver.bind("tcp://127.0.0.1:5557");
-    command_receiver.set(zmq::sockopt::subscribe, "WRITE");
+    zmq::context_t cmd_ctx(1);
+    zmq::socket_t cmd_sub(cmd_ctx, zmq::socket_type::sub);
+    cmd_sub.connect("tcp://127.0.0.1:5557");
+    cmd_sub.set(zmq::sockopt::subscribe, "WRITE");
 
     auto start_time = std::chrono::high_resolution_clock::now();
 
     while (true) {
-        zmq::message_t cmd_topic;
-        while (command_receiver.recv(cmd_topic, zmq::recv_flags::dontwait)) {
-            zmq::message_t cmd_payload;
-            command_receiver.recv(cmd_payload, zmq::recv_flags::none);
-            try {
-                json cmd = json::parse(cmd_payload.to_string());
-                uint32_t addr = std::stoul(cmd["addr"].get<std::string>(), nullptr, 16);
-                float val = cmd["val"].get<float>();
-                reader.writeMemory(addr, val);
-                std::cout << "[Backend] DA GHI " << val << " XUONG RAM DIA CHI: " << std::hex << addr << std::endl;
-            }
-            catch (...) {
-                std::cerr << "[Backend] Loi doc lenh ghi tu ZMQ!" << std::endl;
+        zmq::message_t topic;
+        auto res_topic = cmd_sub.recv(topic, zmq::recv_flags::dontwait);
+
+        if (res_topic.has_value()) {
+
+            if (!topic.more()) continue;
+
+            zmq::message_t payload;
+            auto res_payload = cmd_sub.recv(payload, zmq::recv_flags::none);
+
+            if (res_payload.has_value()) {
+                try {
+                    auto j = json::parse(payload.to_string());
+                    uint32_t addr = std::stoul(j["addr"].get<std::string>(), nullptr, 16);
+                    std::string val_str = j["val_str"].get<std::string>();
+                    std::string type = j["type"].get<std::string>(); // Lấy thêm Data Type
+
+                    if (reader.writeMemory(addr, val_str, type)) {
+                        std::cout << "[Backend] GHI THANH CONG: " << val_str << " (" << type << ") vao " << std::hex << addr << std::endl;
+                    }
+                }
+                catch (const std::exception& e) {
+                    std::cerr << "[Backend] Loi Parse JSON: " << e.what() << std::endl;
+                }
             }
         }
 

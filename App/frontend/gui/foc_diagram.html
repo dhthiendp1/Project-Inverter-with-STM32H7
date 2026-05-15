@@ -236,19 +236,27 @@
             vars.forEach(v => {
                 html += `<tr class="data-row" oncontextmenu="showContextMenu(event, '${v.id}')">
                     <td style="text-align:center;"><input type="checkbox" onchange="if(backend) backend.js_toggle_var_to_plot('${v.id}', this.checked)"></td>
-                    <td><b>${v.id}</b></td><td style="color:#888">${v.type}</td><td style="color:#00a8ff; font-family:monospace;">${v.addr}</td>
-                    <td class="val-read">0.00</td>
+                    <td><b>${v.id}</b></td>
                     <td>
-                        <input type="text" placeholder="Value"
-                               onkeydown="if(event.key === 'Enter') writeDataToMCU('${v.addr}', this.value, this)"
-                               style="width: 40px; font-size:11px; background:#111; color:#fff; border:1px solid #555;">
-
-                        <button onclick="writeDataToMCU('${v.addr}', this.previousElementSibling.value, this.previousElementSibling)"
-                                style="font-size:10px; background:#d97706; border:none; color:white; padding: 2px 5px;">Ghi</button>
+                        <select onchange="updateVarType('${v.id}', this.value)" style="background:#111; color:#00a8ff; border:1px solid #444; font-size:11px;">
+                            <option value="float32" ${v.type==='float32'?'selected':''}>float32</option>
+                            <option value="int32" ${v.type==='int32'?'selected':''}>int32</option>
+                            <option value="uint32" ${v.type==='uint32'?'selected':''}>uint32</option>
+                            <option value="int16" ${v.type==='int16'?'selected':''}>int16</option>
+                            <option value="uint16" ${v.type==='uint16'?'selected':''}>uint16</option>
+                            <option value="uint8" ${v.type==='uint8'?'selected':''}>uint8</option>
+                        </select>
+                    </td>
+                    <td style="color:#00a8ff; font-family:monospace;">${v.addr}</td>
+                    <td class="val-read" id="read-${v.id}">0.00</td>
+                    <td>
+                        <input type="text" placeholder="Enter để ghi"
+                               onkeydown="if(event.key === 'Enter') writeDataToMCU('${v.addr}', this.value, this, '${v.type}')"
+                               style="width: 80%; font-size:11px; background:#111; color:#fff; border:1px solid #555; padding: 2px;">
                     </td>
                 </tr>`;
             });
-            if(html === '') html = '<tr><td colspan="6" style="text-align:center; color:#777">Khối này chưa gán biến.</td></tr>';
+            if(html === '') html = '<tr><td colspan="6" style="text-align:center; color:#777">Chưa gán biến cho khối này.</td></tr>';
             document.getElementById('prop-body').innerHTML = html;
         }
 
@@ -257,19 +265,32 @@
         function deleteVariable() { if(!activeBlock || !varToDelete) return; blockDB[activeBlock] = blockDB[activeBlock].filter(v => v.id !== varToDelete); renderPropertiesTable(); if(backend) backend.js_remove_mapping(activeBlock, varToDelete); }
         function togglePause() { if(appState === 'offline' || appState === 'review') return; setAppMode(appState === 'realtime' ? 'paused' : 'realtime'); if(backend) backend.js_toggle_pause(appState === 'paused'); }
 
-        setInterval(() => { if(appState === 'realtime') { document.querySelectorAll('.val-read').forEach(el => { el.innerText = (Math.random()*10).toFixed(2); }); } }, 1000);
+        //setInterval(() => { if(appState === 'realtime') { document.querySelectorAll('.val-read').forEach(el => { el.innerText = (Math.random()*10).toFixed(2); }); } }, 1000);
 
-        function writeDataToMCU(address, valueStr, inputElement) {
-            if (valueStr.trim() === "") return; // Bỏ qua nếu ô trống
-
+        function writeDataToMCU(address, valueStr, inputEl, dataType) {
+            if (valueStr.trim() === "") return;
             if (backend) {
-                backend.js_write_data(address, valueStr);
-                inputElement.value = "";
-                inputElement.blur();
+                backend.js_write_data(address, valueStr, dataType); // Bắn cả kiểu dữ liệu qua Python
+                inputEl.style.borderColor = "#00ff00";
+                inputEl.value = "";
+                inputEl.blur();
+                setTimeout(() => { inputEl.style.borderColor = "#555"; }, 500);
+            }
+        }
+        function updateReadDataFromPython(dataJson) {
+            const data = JSON.parse(dataJson);
+            for (const [varName, value] of Object.entries(data)) {
+                const el = document.getElementById(`read-${varName}`);
+                if (el) el.innerText = value.toFixed(4);
+            }
+        }
 
-                console.log(`[GUI] Đã lệnh ghi ${valueStr} xuống RAM ${address}`);
-            } else {
-                alert("Chưa kết nối với Backend!");
+        function updateVarType(varId, newType) {
+            const v = blockDB[activeBlock].find(x => x.id === varId);
+            if(v) {
+                v.type = newType;
+                if(backend) backend.js_save_mapping(activeBlock, v.id, v.addr, newType); // Tự động lưu json
+                renderPropertiesTable(); // Cập nhật lại giao diện
             }
         }
     </script>

@@ -67,11 +67,35 @@ namespace FOC {
         }
     }
 
-    bool StlinkReader::writeMemory(uint32_t addr, float value) {
+    bool StlinkReader::writeMemory(uint32_t addr, const std::string& val_str, const std::string& type) {
         if (!is_connected || sl == nullptr) return false;
 
-        std::memcpy(sl->q_buf, &value, 4);
-        return (stlink_write_mem32(sl, addr, 4) == 0);
+        try {
+            if (type == "float32") {
+                float val = std::stof(val_str);
+                std::memcpy(sl->q_buf, &val, 4);
+                return (stlink_write_mem32(sl, addr, 4) == 0);
+            }
+            else if (type == "uint8" || type == "int8") {
+                uint8_t val = static_cast<uint8_t>(std::stoi(val_str));
+                std::memcpy(sl->q_buf, &val, 1);
+                return (stlink_write_mem8(sl, addr, 1) == 0); // Lệnh ghi đúng 1 byte (Không làm hỏng RAM xung quanh)
+            }
+            else if (type == "int16" || type == "uint16") {
+                uint16_t val = static_cast<uint16_t>(std::stoi(val_str));
+                std::memcpy(sl->q_buf, &val, 2);
+                return (stlink_write_mem8(sl, addr, 2) == 0); // stlink dùng mem8 để ghi mảng 2 byte
+            }
+            else { // int32 / uint32
+                uint32_t val = static_cast<uint32_t>(std::stoul(val_str));
+                std::memcpy(sl->q_buf, &val, 4);
+                return (stlink_write_mem32(sl, addr, 4) == 0);
+            }
+        }
+        catch (...) {
+            std::cerr << "[Hardware] Loi ep kieu du lieu khi ghi!" << std::endl;
+            return false;
+        }
     }
 
 } // namespace FOC

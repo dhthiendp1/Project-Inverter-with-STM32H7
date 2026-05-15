@@ -432,6 +432,16 @@ class WebBridge(QObject):
             self.main_app.app_state = 'review'
             self.main_app.web.page().runJavaScript("setAppMode('review');")
 
+    @pyqtSlot(str, str, str)
+    def js_write_data(self, addr_hex, val_str, data_type):
+        try:
+            # Gửi nguyên văn mọi thứ xuống C++ để C++ tự ép kiểu phần cứng
+            payload = json.dumps({"addr": addr_hex, "val_str": val_str, "type": data_type})
+            self.main_app.cmd_socket.send_string("WRITE", zmq.SNDMORE)
+            self.main_app.cmd_socket.send_string(payload)
+        except Exception as e:
+            print(f"Lỗi gửi lệnh ghi: {e}")
+
 
 class MainApp(QMainWindow):
     def __init__(self):
@@ -458,7 +468,7 @@ class MainApp(QMainWindow):
         self.x_history = []
         self.y_history = {}
 
-        # 1. KẾT NỐI ZMQ TRỰC TIẾP (Không dùng QThread nữa)
+        # 1. KẾT NỐI ZMQ
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.SUB)
         self.socket.connect("tcp://127.0.0.1:5556")
@@ -467,11 +477,16 @@ class MainApp(QMainWindow):
         # 2. BỘ ĐỊNH THỜI VẼ ĐỒ THỊ 30 FPS
         self.timer = QTimer()
         self.timer.timeout.connect(self.poll_and_update_gui)
-        self.timer.start(30)  # Cứ 30ms chạy 1 lần
+        self.timer.start(30)
+
+        self.cmd_context = zmq.Context()
+        self.cmd_socket = self.cmd_context.socket(zmq.PUB)
+        self.cmd_socket.bind("tcp://127.0.0.1:5557")
 
     def poll_and_update_gui(self):
         has_new_data = False
         latest_payload = None
+        data_dict = None
 
         # 1. HÚT DỮ LIỆU
         while True:
@@ -504,15 +519,14 @@ class MainApp(QMainWindow):
         # 2. XỬ LÝ VÀ IN LOG DEBUG NẾU CÓ DỮ LIỆU
         if has_new_data and latest_payload:
             # --- KHU VỰC IN LOG RA TERMINAL ---
-            print(f"\n[DEBUG] Đã nhận Data: {latest_payload['data']}")
+            # print(f"\n[DEBUG] Đã nhận Data: {latest_payload['data']}")
 
             danh_sach_duong_ve = list(self.plot_win.curves.keys())
-            print(f"[DEBUG] Đồ thị đang được cài để vẽ các biến này: {danh_sach_duong_ve}")
+            # print(f"[DEBUG] Đồ thị đang được cài để vẽ các biến này: {danh_sach_duong_ve}")
 
             if len(danh_sach_duong_ve) == 0:
                 print(
                     " >>> [CẢNH BÁO]: BẠN CHƯA GÁN 'TARGET'. HÃY NHÌN SANG BẢNG BÊN PHẢI GIAO DIỆN, CHỌN TARGET LÀ 'SCOPE 1' <<<")
-            # -----------------------------------
 
             if self.app_state == 'offline':
                 self.app_state = 'realtime'
@@ -530,6 +544,12 @@ class MainApp(QMainWindow):
 
                 if self.x_history:
                     self.plot_win.set_real_data(np.array(self.x_history, dtype=float), plot_dict)
+
+        # READ DATA
+        if data_dict:
+            json_str = json.dumps(data_dict)
+            self.web.page().runJavaScript(f"updateReadDataFromPython('{json_str}')")
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")

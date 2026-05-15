@@ -12,6 +12,6 @@ namespace FOC {
 
     struct DataFrame {
         double timestamp;
-        std::map<std::string, float> data; // SỬA DÒNG NÀY
+        std::map<std::string, float> data;
     };
 }

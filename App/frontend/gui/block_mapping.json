@@ -1,30 +1,13 @@
 {
-    "Scope1": [
-        {
-            "id": "test_signal1",
-            "addr": "0x24000078",
-            "type": "float32"
-        }
-    ],
     "SENSORS": [
         {
             "id": "start_stop",
             "addr": "0x2400008c",
-            "type": "float32"
+            "type": "uint8"
         },
         {
-            "id": "tri_dir",
-            "addr": "0x24000000",
-            "type": "float32"
-        },
-        {
-            "id": "wave_square",
-            "addr": "0x24000084",
-            "type": "float32"
-        },
-        {
-            "id": "time_t",
-            "addr": "0x24000090",
+            "id": "wave_sine",
+            "addr": "0x2400007c",
             "type": "float32"
         },
         {
@@ -33,18 +16,8 @@
             "type": "float32"
         },
         {
-            "id": "PIo2",
-            "addr": "0x8004058",
-            "type": "float32"
-        },
-        {
-            "id": "npio2_hw",
-            "addr": "0x8003ed0",
-            "type": "float32"
-        },
-        {
-            "id": "two_over_pi",
-            "addr": "0x8003f50",
+            "id": "wave_square",
+            "addr": "0x24000084",
             "type": "float32"
         }
     ]
