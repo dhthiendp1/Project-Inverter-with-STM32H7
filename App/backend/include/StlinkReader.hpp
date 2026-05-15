@@ -8,18 +8,13 @@ namespace FOC {
     public:
         StlinkReader();
         ~StlinkReader();
-
-        // Kết nối với ST-Link qua cổng USB
         bool connect();
-
-        // Ngắt kết nối và giải phóng tài nguyên
         void disconnect();
-
-        // Đọc giá trị từ một địa chỉ RAM cụ thể
         float readMemory(uint32_t addr, const std::string& type);
+        bool writeMemory(uint32_t addr, float value);
 
     private:
-        stlink_t* sl = nullptr; // Cấu trúc quản lý thiết bị của thư viện stlink
+        stlink_t* sl = nullptr;
         bool is_connected = false;
     };
 }

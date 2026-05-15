@@ -21,7 +21,7 @@ namespace FOC {
     void ZmqPublisher::sendData(const DataFrame& frame) {
         nlohmann::json j;
         j["timestamp"] = frame.timestamp;
-        j["data"] = frame.data; // SỬA DÒNG NÀY (nlohmann tự động hiểu std::map)
+        j["data"] = frame.data;
 
         std::string payload = j.dump();
         publisher.send(zmq::str_buffer("DATA"), zmq::send_flags::sndmore);

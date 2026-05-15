@@ -113,10 +113,6 @@ class PlotWindow(QMainWindow):
             p.showGrid(x=True, y=True, alpha=0.2)
             p.addLegend(offset=(10, 10))
 
-            if i > 0:
-                p.setXLink(self.plots[0])
-                p.setYLink(self.plots[0])
-
             m1 = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#ffeb3b', width=2))
             m2 = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#00e5ff', width=2))
             m1.sigDragged.connect(self.update_marker_results)
@@ -327,7 +323,7 @@ class PlotWindow(QMainWindow):
             self.curves[var_name] = {'curve': curve, 'p_idx': p_idx}
             self.update_curve_style(var_name)
 
-    # API CHO BACKEND: Đẩy dữ liệu vào đồ thị
+    # API BACKEND: Đẩy dữ liệu vào đồ thị
     def set_real_data(self, x_array, data_dict):
         if self.is_paused: return
 
@@ -340,13 +336,12 @@ class PlotWindow(QMainWindow):
                     x_plot = x_array[-min_len:]
                     y_plot = y_array[-min_len:]
 
-                    # === CHÈN DÒNG PRINT NÀY VÀO ĐỂ BẮT BỆNH ===
-                    print(
-                        f"[{var_name}] Đang vẽ {min_len} điểm | X (Thời gian): {x_plot[0]:.2f} -> {x_plot[-1]:.2f} | Y: {y_plot[-1]}")
-
-                    info['curve'].setZValue(10)
                     info['curve'].setData(x=x_plot, y=y_plot)
-                    self.plots[info['p_idx']].enableAutoRange(axis='y', enable=True)
+                    p_idx = info['p_idx']
+                    target_plot = self.plots[p_idx]
+                    if len(x_plot) > 0:
+                        current_x_max = x_plot[-1]
+                        target_plot.setXRange(current_x_max - 5, current_x_max, padding=0)
 
 
 class WebBridge(QObject):

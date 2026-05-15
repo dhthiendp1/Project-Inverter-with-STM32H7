@@ -67,4 +67,11 @@ namespace FOC {
         }
     }
 
+    bool StlinkReader::writeMemory(uint32_t addr, float value) {
+        if (!is_connected || sl == nullptr) return false;
+
+        std::memcpy(sl->q_buf, &value, 4);
+        return (stlink_write_mem32(sl, addr, 4) == 0);
+    }
+
 } // namespace FOC
