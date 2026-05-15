@@ -1,0 +1,46 @@
+{
+    "Scope1": [
+        {
+            "id": "test_signal1",
+            "addr": "0x24000078",
+            "type": "float32"
+        }
+    ],
+    "SENSORS": [
+        {
+            "id": "uwTickPrio",
+            "addr": "0x24000008",
+            "type": "float32"
+        },
+        {
+            "id": "test_signal1",
+            "addr": "0x24000078",
+            "type": "float32"
+        },
+        {
+            "id": "htim1",
+            "addr": "0x2400002c",
+            "type": "float32"
+        },
+        {
+            "id": "g_pfnVectors",
+            "addr": "0x8000000",
+            "type": "float32"
+        },
+        {
+            "id": "SystemCoreClock",
+            "addr": "0x24000000",
+            "type": "float32"
+        },
+        {
+            "id": "uwTick",
+            "addr": "0x2400007c",
+            "type": "float32"
+        },
+        {
+            "id": "uwTickFreq",
+            "addr": "0x2400000c",
+            "type": "float32"
+        }
+    ]
+}

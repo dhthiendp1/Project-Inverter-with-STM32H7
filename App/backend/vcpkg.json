@@ -1,0 +1,9 @@
+{
+  "name": "foc-backend",
+  "version": "1.0.0",
+  "dependencies": [
+    "cppzmq",
+    "nlohmann-json"
+  ],
+  "builtin-baseline": "8defa4b8bc4c35071c678e87a0e140dd433489bb"
+}
