@@ -753,6 +753,13 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+# JetBrains IDE (PyCharm, IntelliJ, CLion)
+.idea/
+
+# Thư mục chứa thư viện bên thứ ba
+App/backend/third_party/
+App/frontend/gui/*.dll
+vcpkg_installed/
 
 ### VisualStudio Patch ###
 # Additional files built by Visual Studio
