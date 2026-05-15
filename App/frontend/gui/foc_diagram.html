@@ -120,9 +120,9 @@
             <div class="pane-header">DATA CONTROLS</div>
             <div class="pane-content">
                 <div style="background: #252526; border: 1px solid #444; padding: 10px; border-radius: 4px; display:flex; gap:10px; flex-direction:column;">
-                    <button class="btn" id="btn-pause" style="background:#ff9f43" onclick="togglePause()">⏸ TẠM DỪNG PLOT</button>
-                    <button class="btn" style="background:#00a8ff" onclick="if(backend) backend.js_save_csv()">💾 LƯU DATA (CSV)</button>
-                    <button class="btn" style="background:#9b59b6" onclick="if(backend) backend.js_load_csv()">📂 TẢI DATA ĐÃ LƯU (REVIEW)</button>
+                    <button class="btn" id="btn-pause" style="background:#ff9f43" onclick="togglePause()">⏸ STOP PLOT</button>
+                    <button class="btn" style="background:#00a8ff" onclick="if(backend) backend.js_save_csv()">💾 SAVE DATA (.CSV)</button>
+                    <button class="btn" style="background:#9b59b6" onclick="if(backend) backend.js_load_csv()">📂 LOAD DATA (REVIEW)</button>
                 </div>
             </div>
         </div>
@@ -238,7 +238,14 @@
                     <td style="text-align:center;"><input type="checkbox" onchange="if(backend) backend.js_toggle_var_to_plot('${v.id}', this.checked)"></td>
                     <td><b>${v.id}</b></td><td style="color:#888">${v.type}</td><td style="color:#00a8ff; font-family:monospace;">${v.addr}</td>
                     <td class="val-read">0.00</td>
-                    <td><input type="text" placeholder="Value" style="width: 40px; font-size:11px; background:#111; color:#fff; border:1px solid #555;"> <button style="font-size:10px; background:#d97706; border:none; color:white; padding: 2px 5px;">Ghi</button></td>
+                    <td>
+                        <input type="text" placeholder="Value"
+                               onkeydown="if(event.key === 'Enter') writeDataToMCU('${v.addr}', this.value, this)"
+                               style="width: 40px; font-size:11px; background:#111; color:#fff; border:1px solid #555;">
+
+                        <button onclick="writeDataToMCU('${v.addr}', this.previousElementSibling.value, this.previousElementSibling)"
+                                style="font-size:10px; background:#d97706; border:none; color:white; padding: 2px 5px;">Ghi</button>
+                    </td>
                 </tr>`;
             });
             if(html === '') html = '<tr><td colspan="6" style="text-align:center; color:#777">Khối này chưa gán biến.</td></tr>';
@@ -251,6 +258,20 @@
         function togglePause() { if(appState === 'offline' || appState === 'review') return; setAppMode(appState === 'realtime' ? 'paused' : 'realtime'); if(backend) backend.js_toggle_pause(appState === 'paused'); }
 
         setInterval(() => { if(appState === 'realtime') { document.querySelectorAll('.val-read').forEach(el => { el.innerText = (Math.random()*10).toFixed(2); }); } }, 1000);
+
+        function writeDataToMCU(address, valueStr, inputElement) {
+            if (valueStr.trim() === "") return; // Bỏ qua nếu ô trống
+
+            if (backend) {
+                backend.js_write_data(address, valueStr);
+                inputElement.value = "";
+                inputElement.blur();
+
+                console.log(`[GUI] Đã lệnh ghi ${valueStr} xuống RAM ${address}`);
+            } else {
+                alert("Chưa kết nối với Backend!");
+            }
+        }
     </script>
 </body>
 </html>

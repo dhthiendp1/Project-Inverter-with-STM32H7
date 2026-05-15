@@ -47,9 +47,30 @@ int main() {
         std::cerr << "[LOI] KHONG TIM THAY FILE block_mapping.json!" << std::endl;
     }
 
+    zmq::context_t cmd_context(1);
+    zmq::socket_t command_receiver(cmd_context, zmq::socket_type::sub);
+    command_receiver.bind("tcp://127.0.0.1:5557");
+    command_receiver.set(zmq::sockopt::subscribe, "WRITE");
+
     auto start_time = std::chrono::high_resolution_clock::now();
 
     while (true) {
+        zmq::message_t cmd_topic;
+        while (command_receiver.recv(cmd_topic, zmq::recv_flags::dontwait)) {
+            zmq::message_t cmd_payload;
+            command_receiver.recv(cmd_payload, zmq::recv_flags::none);
+            try {
+                json cmd = json::parse(cmd_payload.to_string());
+                uint32_t addr = std::stoul(cmd["addr"].get<std::string>(), nullptr, 16);
+                float val = cmd["val"].get<float>();
+                reader.writeMemory(addr, val);
+                std::cout << "[Backend] DA GHI " << val << " XUONG RAM DIA CHI: " << std::hex << addr << std::endl;
+            }
+            catch (...) {
+                std::cerr << "[Backend] Loi doc lenh ghi tu ZMQ!" << std::endl;
+            }
+        }
+
         auto now = std::chrono::high_resolution_clock::now();
         double elapsed = std::chrono::duration<double>(now - start_time).count();
 
@@ -58,7 +79,6 @@ int main() {
 
         for (auto& var : active_vars) {
             float val = reader.readMemory(var.address, var.type);
-            //val += static_cast<float>(sin(elapsed * 5.0 + var.address)) * 2.0f;
             frame.data[var.id] = val;
         }
 
