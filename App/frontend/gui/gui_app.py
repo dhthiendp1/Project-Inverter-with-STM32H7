@@ -15,6 +15,7 @@ from elftools.elf.sections import SymbolTableSection
 
 import config_manager
 
+
 class PlotWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -23,7 +24,7 @@ class PlotWindow(QMainWindow):
         self.setStyleSheet("background-color: #121212; color: #ddd;")
 
         self.is_paused = False
-        self.selected_plot_idx = 0
+        self.active_scope_index = 0
         self.markers_enabled = False
         self._updating_table = False
 
@@ -67,11 +68,11 @@ class PlotWindow(QMainWindow):
 
         side_layout.addWidget(QLabel("VARIABLES & STYLE"))
         self.tbl_vars = QTableWidget(0, 5)
-        self.tbl_vars.setHorizontalHeaderLabels(["Var", "Target", "Color", "Width", "Style"])
+        self.tbl_vars.setHorizontalHeaderLabels(["Var", "Plot", "Color", "Width", "Style"])
         self.tbl_vars.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-        self.tbl_vars.setColumnWidth(0, 80);
-        self.tbl_vars.setColumnWidth(1, 80)
-        self.tbl_vars.setColumnWidth(2, 80);
+        self.tbl_vars.setColumnWidth(0, 80)
+        self.tbl_vars.setColumnWidth(1, 40)
+        self.tbl_vars.setColumnWidth(2, 80)
         self.tbl_vars.setColumnWidth(3, 50)
         self.tbl_vars.horizontalHeader().setStretchLastSection(True)
         self.tbl_vars.setStyleSheet(
@@ -103,7 +104,11 @@ class PlotWindow(QMainWindow):
         self.plots = []
         self.cursors_m1 = []
         self.cursors_m2 = []
+
+        # NÂNG CẤP CẤU TRÚC LƯU TRỮ TỪ ĐIỂN
+        # Cấu trúc mới: { var_name: { scope_idx_1: curve1, scope_idx_2: curve2 } }
         self.curves = {}
+
         self.color_list = ["Green", "Red", "Cyan", "Yellow", "Purple", "Orange", "White"]
 
         for i in range(4):
@@ -117,10 +122,10 @@ class PlotWindow(QMainWindow):
             m2 = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#00e5ff', width=2))
             m1.sigDragged.connect(self.update_marker_results)
             m2.sigDragged.connect(self.update_marker_results)
-            m1.hide();
+            m1.hide()
             m2.hide()
 
-            p.addItem(m1);
+            p.addItem(m1)
             p.addItem(m2)
             self.plots.append(p)
             self.cursors_m1.append(m1)
@@ -162,22 +167,23 @@ class PlotWindow(QMainWindow):
                     break
 
     def on_plot_clicked(self, idx):
-        self.selected_plot_idx = idx
+        self.active_scope_index = idx
         self.highlight_selected_plot()
         self.update_marker_visibility()
         self.update_marker_results()
+        self.update_var_table_checkboxes()
 
     def highlight_selected_plot(self):
         for i, p in enumerate(self.plots):
-            is_sel = (i == self.selected_plot_idx)
+            is_sel = (i == self.active_scope_index)
             p.showAxis('top', show=False)
             p.showAxis('right', show=False)
             if is_sel:
                 p.setLabel('top', f"Scope {i + 1} ", color='#00ff00', bold=True)
-                p.vb.setBorder(pg.mkPen('#00ff00', width=2))
+                p.vb.setBorder(pg.mkPen('#00ff00', width=3))
             else:
                 p.setLabel('top', f"Scope {i + 1}", color='#888', bold=False)
-                p.vb.setBorder(pg.mkPen('#444444', width=1))
+                p.vb.setBorder(pg.mkPen('#333333', width=1))
 
     def toggle_markers(self, state):
         self.markers_enabled = (state == Qt.CheckState.Checked.value)
@@ -189,7 +195,7 @@ class PlotWindow(QMainWindow):
 
     def update_marker_visibility(self):
         for i in range(4):
-            is_sel = (i == self.selected_plot_idx)
+            is_sel = (i == self.active_scope_index)
             show = is_sel and self.markers_enabled
             self.cursors_m1[i].setVisible(show)
             self.cursors_m2[i].setVisible(show)
@@ -204,13 +210,13 @@ class PlotWindow(QMainWindow):
         self.update_marker_visibility()
 
     def get_y_values_at_x(self, x_val):
-        """ TÌM GIÁ TRỊ Y CỦA CÁC ĐƯỜNG CONG TẠI VỊ TRÍ MARKER (X) """
+        """ TÌM GIÁ TRỊ Y CỦA CÁC ĐƯỜNG CONG Ở TRÊN SCOPE ĐANG HOẠT ĐỘNG """
         res = []
-        for var_name, info in self.curves.items():
-            if info['p_idx'] == self.selected_plot_idx:
-                x_data, y_data = info['curve'].getData()
+        for var_name, scope_curves in self.curves.items():
+            if self.active_scope_index in scope_curves:
+                curve = scope_curves[self.active_scope_index]
+                x_data, y_data = curve.getData()
                 if x_data is not None and len(x_data) > 0:
-                    # Tìm index có giá trị X gần với Marker nhất
                     idx = (np.abs(x_data - x_val)).argmin()
                     res.append(f"{var_name}: {y_data[idx]:.4g}")
         return " | ".join(res) if res else "--"
@@ -219,13 +225,12 @@ class PlotWindow(QMainWindow):
         if not self.markers_enabled: return
         self._updating_table = True
 
-        idx = self.selected_plot_idx
+        idx = self.active_scope_index
         t1 = self.cursors_m1[idx].value()
         t2 = self.cursors_m2[idx].value()
         dt = abs(t2 - t1)
         freq = 1 / dt if dt > 0 else 0
 
-        # Đọc giá trị Y từ Data Array thực tế
         val_m1 = self.get_y_values_at_x(t1)
         val_m2 = self.get_y_values_at_x(t2)
 
@@ -243,25 +248,34 @@ class PlotWindow(QMainWindow):
         if index == 0:
             self.gw.addItem(self.plots[0], row=0, col=0)
         elif index == 1:
-            self.gw.addItem(self.plots[0], row=0, col=0);
+            self.gw.addItem(self.plots[0], row=0, col=0)
             self.gw.addItem(self.plots[1], row=1, col=0)
         else:
-            self.gw.addItem(self.plots[0], row=0, col=0);
+            self.gw.addItem(self.plots[0], row=0, col=0)
             self.gw.addItem(self.plots[1], row=0, col=1)
-            self.gw.addItem(self.plots[2], row=1, col=0);
+            self.gw.addItem(self.plots[2], row=1, col=0)
             self.gw.addItem(self.plots[3], row=1, col=1)
         self.highlight_selected_plot()
 
     def update_available_vars(self, var_name, is_checked):
         if is_checked:
+            for row in range(self.tbl_vars.rowCount()):
+                if self.tbl_vars.item(row, 0).text() == var_name:
+                    return
+
             rows = self.tbl_vars.rowCount()
             self.tbl_vars.insertRow(rows)
             self.tbl_vars.setItem(rows, 0, QTableWidgetItem(var_name))
 
-            cb_target = QComboBox()
-            cb_target.addItems(["None", "Scope 1", "Scope 2", "Scope 3", "Scope 4"])
-            cb_target.currentTextChanged.connect(lambda text, v=var_name: self.assign_var_to_plot(v, text))
-            self.tbl_vars.setCellWidget(rows, 1, cb_target)
+            chk_box = QCheckBox()
+            chk_widget = QWidget()
+            chk_layout = QHBoxLayout(chk_widget)
+            chk_layout.addWidget(chk_box)
+            chk_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            chk_layout.setContentsMargins(0, 0, 0, 0)
+            self.tbl_vars.setCellWidget(rows, 1, chk_widget)
+
+            chk_box.stateChanged.connect(lambda state, name=var_name: self.on_plot_toggled(name, state))
 
             cb_color = QComboBox()
             cb_color.addItems(self.color_list)
@@ -284,14 +298,68 @@ class PlotWindow(QMainWindow):
                 if self.tbl_vars.item(i, 0).text() == var_name:
                     self.tbl_vars.removeRow(i)
                     break
-            self.assign_var_to_plot(var_name, "None")
+
+            # Xóa biến khỏi TOÀN BỘ các Scope nếu bị gỡ khỏi UI
+            if var_name in self.curves:
+                for scope_idx, curve in list(self.curves[var_name].items()):
+                    try:
+                        self.plots[scope_idx].legend.removeItem(curve)
+                    except:
+                        pass
+                    self.plots[scope_idx].removeItem(curve)
+                del self.curves[var_name]
+
+    def on_plot_toggled(self, var_name, state):
+        scope_idx = self.active_scope_index
+
+        # Khởi tạo từ điển cho biến nếu chưa có
+        if var_name not in self.curves:
+            self.curves[var_name] = {}
+
+        if state == 2:
+            # CHỈ THÊM vào Scope đang được chọn (Không gỡ khỏi Scope cũ)
+            if scope_idx not in self.curves[var_name]:
+                target_plot = self.plots[scope_idx]
+                curve = target_plot.plot(name=var_name)
+                self.curves[var_name][scope_idx] = curve
+                self.update_curve_style(var_name)
+        else:
+            # Gỡ khỏi Scope đang được chọn
+            if scope_idx in self.curves[var_name]:
+                old_plot = self.plots[scope_idx]
+                old_curve = self.curves[var_name][scope_idx]
+                try:
+                    old_plot.legend.removeItem(old_curve)
+                except:
+                    pass
+                old_plot.removeItem(old_curve)
+                del self.curves[var_name][scope_idx]
+
+            # Dọn dẹp bộ nhớ nếu biến không còn hiển thị ở bất kỳ đâu
+            if len(self.curves[var_name]) == 0:
+                del self.curves[var_name]
+
+    def update_var_table_checkboxes(self):
+        for row in range(self.tbl_vars.rowCount()):
+            var_name = self.tbl_vars.item(row, 0).text()
+            chk_widget = self.tbl_vars.cellWidget(row, 1)
+            if chk_widget:
+                chk_box = chk_widget.findChild(QCheckBox)
+                if chk_box:
+                    chk_box.blockSignals(True)
+                    # Nếu biến này đang tồn tại trong Scope hiện tại -> Đánh dấu Tick
+                    if var_name in self.curves and self.active_scope_index in self.curves[var_name]:
+                        chk_box.setChecked(True)
+                    else:
+                        chk_box.setChecked(False)
+                    chk_box.blockSignals(False)
 
     def update_curve_style(self, var_name):
         if var_name not in self.curves: return
         row = -1
         for i in range(self.tbl_vars.rowCount()):
             if self.tbl_vars.item(i, 0).text() == var_name:
-                row = i;
+                row = i
                 break
         if row == -1: return
 
@@ -305,29 +373,15 @@ class PlotWindow(QMainWindow):
         s_name = self.tbl_vars.cellWidget(row, 4).currentText()
 
         pen = pg.mkPen(color=c_map.get(c_name, '#fff'), width=w_val, style=s_map.get(s_name, Qt.PenStyle.SolidLine))
-        self.curves[var_name]['curve'].setPen(pen)
 
-    def assign_var_to_plot(self, var_name, target_text):
-        if var_name in self.curves:
-            old_p_idx = self.curves[var_name]['p_idx']
-            old_plot = self.plots[old_p_idx]
-            old_curve = self.curves[var_name]['curve']
-            old_plot.legend.removeItem(old_curve)
-            old_plot.removeItem(old_curve)
-            del self.curves[var_name]
+        # ÁP DỤNG MÀU CHO TẤT CẢ ĐƯỜNG CONG CỦA BIẾN NÀY TRÊN MỌI SCOPE
+        for scope_idx, curve in self.curves[var_name].items():
+            curve.setPen(pen)
 
-        if target_text != "None":
-            p_idx = int(target_text.split(" ")[1]) - 1
-            target_plot = self.plots[p_idx]
-            curve = target_plot.plot(name=var_name)
-            self.curves[var_name] = {'curve': curve, 'p_idx': p_idx}
-            self.update_curve_style(var_name)
-
-    # API BACKEND: Đẩy dữ liệu vào đồ thị
     def set_real_data(self, x_array, data_dict):
         if self.is_paused: return
 
-        for var_name, info in self.curves.items():
+        for var_name, scope_curves in self.curves.items():
             if var_name in data_dict:
                 y_array = data_dict[var_name]
                 min_len = min(len(x_array), len(y_array))
@@ -336,12 +390,13 @@ class PlotWindow(QMainWindow):
                     x_plot = x_array[-min_len:]
                     y_plot = y_array[-min_len:]
 
-                    info['curve'].setData(x=x_plot, y=y_plot)
-                    p_idx = info['p_idx']
-                    target_plot = self.plots[p_idx]
-                    if len(x_plot) > 0:
-                        current_x_max = x_plot[-1]
-                        target_plot.setXRange(current_x_max - 5, current_x_max, padding=0)
+                    # CẬP NHẬT DỮ LIỆU ĐỒNG LOẠT VÀO MỌI SCOPE ĐANG VẼ BIẾN NÀY
+                    for scope_idx, curve in scope_curves.items():
+                        curve.setData(x=x_plot, y=y_plot)
+                        target_plot = self.plots[scope_idx]
+                        if len(x_plot) > 0:
+                            current_x_max = x_plot[-1]
+                            target_plot.setXRange(current_x_max - 5, current_x_max, padding=0)
 
 
 class WebBridge(QObject):
@@ -358,7 +413,6 @@ class WebBridge(QObject):
             with open(file_path, 'rb') as f:
                 elffile = ELFFile(f)
 
-                # Bước 1: Quét nhanh bảng mã Symbol tĩnh để lấy Địa chỉ và Kích thước byte
                 for section in elffile.iter_sections():
                     if isinstance(section, SymbolTableSection):
                         for symbol in section.iter_symbols():
@@ -366,36 +420,29 @@ class WebBridge(QObject):
                                 var_name = symbol.name
                                 byte_size = symbol['st_size']
 
-                                # Dự phòng kiểu dữ liệu dựa trên kích thước byte nếu file không chứa mã debug
                                 auto_type = "float32" if byte_size == 4 else ("int16" if byte_size == 2 else "uint8")
                                 symbols_dict[var_name] = {"addr": hex(symbol['st_value']), "type": auto_type}
 
-                # Bước 2: THO MÒ DWARF CẤU TRÚC (Giống y hệt STM32 CubeProgrammer)
                 if elffile.has_dwarf_info():
                     print("[ELF Explorer] Đang bóc tách phân vùng DWARF để tìm Type chuẩn...")
                     dwarfinfo = elffile.get_dwarf_info()
 
-                    for CU in dwarfinfo.iter_CUs():  # Duyệt qua các file .c thành phần
-                        # Xây dựng bảng tra cứu nhanh các Node thông tin (DIE)
+                    for CU in dwarfinfo.iter_CUs():
                         die_by_offset = {die.offset: die for die in CU.iter_DIEs()}
 
                         for die in die_by_offset.values():
-                            # Nếu Node này khai báo một biến toàn cục
                             if die.tag == 'DW_TAG_variable' and 'DW_AT_name' in die.attributes:
                                 var_name = die.attributes['DW_AT_name'].value.decode('utf-8', errors='ignore')
 
-                                # Nếu biến này nằm trong danh sách cần giám sát
                                 if var_name in symbols_dict and 'DW_AT_type' in die.attributes:
                                     type_offset = die.attributes['DW_AT_type'].value + CU.cu_offset
 
-                                    # Gọi hàm giải mã đệ quy để xuyên qua các lớp typedef (ví dụ: uint8_t -> unsigned char)
                                     base_type_die = self.resolve_dwarf_type(die_by_offset, type_offset)
 
                                     if base_type_die and 'DW_AT_name' in base_type_die.attributes:
                                         raw_type_name = base_type_die.attributes['DW_AT_name'].value.decode('utf-8',
                                                                                                             errors='ignore').lower()
 
-                                        # Ánh xạ từ kiểu dữ liệu C thuần sang kiểu dữ liệu của hệ thống DAQ
                                         if "float" in raw_type_name:
                                             mapped_type = "float32"
                                         elif "unsigned char" in raw_type_name or "uint8" in raw_type_name:
@@ -411,13 +458,11 @@ class WebBridge(QObject):
                                         else:
                                             mapped_type = "int32"
 
-                                        # Ghi đè kiểu dữ liệu xịn từ DWARF vào bản đồ biến
                                         symbols_dict[var_name]["type"] = mapped_type
         except Exception as e:
             print(f"Lỗi phân tích file ELF/DWARF: {e}")
         return symbols_dict
 
-    # THÊM HÀM PHỤ TRỢ ĐỆ QUY NÀY NGAY PHÍA DƯỚI HÀM TRÊN
     def resolve_dwarf_type(self, die_by_offset, type_offset):
         current_die = die_by_offset.get(type_offset)
         while current_die:
@@ -448,7 +493,6 @@ class WebBridge(QObject):
         )
 
         if file_path:
-            # Gọi hàm đọc ELF thật
             elf_symbols = self.parse_elf_file_real(file_path)
 
             if not elf_symbols:
@@ -475,6 +519,22 @@ class WebBridge(QObject):
     @pyqtSlot(str, str)
     def js_remove_mapping(self, block, var_name):
         self.main_app.mapping_data = config_manager.remove_var_from_block(self.main_app.mapping_data, block, var_name)
+        is_still_exist = False
+        for blk_name, vars_list in self.main_app.mapping_data.items():
+            for v in vars_list:
+                if v.get('id') == var_name:
+                    is_still_exist = True
+                    break
+            if is_still_exist:
+                break
+        if not is_still_exist:
+            self.main_app.plot_win.update_available_vars(var_name, False)
+            print(f"[UI Cleanup] VAR '{var_name}' OUT SCOPE.")
+        try:
+            self.main_app.cmd_socket.send_string("RELOAD")
+            print(f"[Python GUI] ---> HOT-RELOAD UPDATE MAPING RAM (Removed {var_name})!")
+        except Exception as e:
+            print(f"[Python GUI] KHONG THE GUI LENH RELOAD JSON: {e}")
 
     @pyqtSlot(str, bool)
     def js_toggle_var_to_plot(self, var_name, is_checked):
@@ -492,7 +552,7 @@ class WebBridge(QObject):
 
     @pyqtSlot()
     def js_save_csv(self):
-        QMessageBox.information(self.main_app, "Lưu Data", "Dữ liệu đồ thị đã được xuất ra file CSV thành công!")
+        QMessageBox.information(self.main_app, "SAVE DATA", "SCOPE EXPORT CSV SUCCESS!")
 
     @pyqtSlot()
     def js_load_csv(self):
@@ -505,7 +565,6 @@ class WebBridge(QObject):
     @pyqtSlot(str, str, str)
     def js_write_data(self, addr_hex, val_str, data_type):
         try:
-            # Gửi nguyên văn mọi thứ xuống C++ để C++ tự ép kiểu phần cứng
             payload = json.dumps({"addr": addr_hex, "val_str": val_str, "type": data_type})
             self.main_app.cmd_socket.send_string("WRITE", zmq.SNDMORE)
             self.main_app.cmd_socket.send_string(payload)
@@ -581,22 +640,19 @@ class MainApp(QMainWindow):
                         self.y_history[var_name].pop(0)
 
             except zmq.Again:
-                break  # Đã hút hết dữ liệu
+                break
             except Exception as e:
                 print(f"\n[DEBUG LỖI MẠNG ZMQ]: {e}")
                 break
 
         # 2. XỬ LÝ VÀ IN LOG DEBUG NẾU CÓ DỮ LIỆU
         if has_new_data and latest_payload:
-            # --- KHU VỰC IN LOG RA TERMINAL ---
-            # print(f"\n[DEBUG] Đã nhận Data: {latest_payload['data']}")
 
             danh_sach_duong_ve = list(self.plot_win.curves.keys())
-            # print(f"[DEBUG] Đồ thị đang được cài để vẽ các biến này: {danh_sach_duong_ve}")
 
             if len(danh_sach_duong_ve) == 0:
                 print(
-                    " >>> [CẢNH BÁO]: BẠN CHƯA GÁN 'TARGET'. HÃY NHÌN SANG BẢNG BÊN PHẢI GIAO DIỆN, CHỌN TARGET LÀ 'SCOPE 1' <<<")
+                    " >>> [CẢNH BÁO]: CHƯA CÓ BIẾN NÀO ĐƯỢC VẼ. HÃY TICK CHỌN Ô 'PLOT' TẠI BẢNG VARIABLES <<<")
 
             if self.app_state == 'offline':
                 self.app_state = 'realtime'
@@ -619,6 +675,7 @@ class MainApp(QMainWindow):
         if data_dict:
             json_str = json.dumps(data_dict)
             self.web.page().runJavaScript(f"updateReadDataFromPython('{json_str}')")
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
