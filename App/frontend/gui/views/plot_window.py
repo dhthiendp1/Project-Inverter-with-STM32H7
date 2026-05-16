@@ -1,19 +1,9 @@
-import sys
-import os
-import json
 import numpy as np
 import pyqtgraph as pg
-import zmq
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
-                             QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem,
-                             QHeaderView, QComboBox, QSplitter, QPushButton, QCheckBox, QFileDialog, QMessageBox)
-from PyQt6.QtCore import Qt, QUrl, pyqtSlot, QObject, QThread, pyqtSignal, QTimer
-from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtWebChannel import QWebChannel
-from elftools.elf.elffile import ELFFile
-from elftools.elf.sections import SymbolTableSection
-
-import config_manager
+from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+                             QLabel, QTableWidget, QTableWidgetItem, QHeaderView,
+                             QComboBox, QSplitter, QPushButton, QCheckBox)
+from PyQt6.QtCore import Qt
 
 
 class PlotWindow(QMainWindow):
@@ -35,7 +25,6 @@ class PlotWindow(QMainWindow):
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
         main_layout.addWidget(self.splitter)
 
-        # KHU VỰC ĐỒ THỊ
         self.mid_panel = QWidget()
         mid_layout = QVBoxLayout(self.mid_panel)
 
@@ -58,10 +47,8 @@ class PlotWindow(QMainWindow):
         self.gw.setBackground('#121212')
         mid_layout.addWidget(self.gw)
         self.splitter.addWidget(self.mid_panel)
-
         self.gw.scene().sigMouseClicked.connect(self.handle_scene_click)
 
-        # SIDEBAR PHẢI
         self.right_sidebar = QWidget()
         side_layout = QVBoxLayout(self.right_sidebar)
         side_layout.setContentsMargins(5, 0, 5, 5)
@@ -104,11 +91,7 @@ class PlotWindow(QMainWindow):
         self.plots = []
         self.cursors_m1 = []
         self.cursors_m2 = []
-
-        # NÂNG CẤP CẤU TRÚC LƯU TRỮ TỪ ĐIỂN
-        # Cấu trúc mới: { var_name: { scope_idx_1: curve1, scope_idx_2: curve2 } }
         self.curves = {}
-
         self.color_list = ["Green", "Red", "Cyan", "Yellow", "Purple", "Orange", "White"]
 
         for i in range(4):
@@ -210,7 +193,6 @@ class PlotWindow(QMainWindow):
         self.update_marker_visibility()
 
     def get_y_values_at_x(self, x_val):
-        """ TÌM GIÁ TRỊ Y CỦA CÁC ĐƯỜNG CONG Ở TRÊN SCOPE ĐANG HOẠT ĐỘNG """
         res = []
         for var_name, scope_curves in self.curves.items():
             if self.active_scope_index in scope_curves:
@@ -260,8 +242,7 @@ class PlotWindow(QMainWindow):
     def update_available_vars(self, var_name, is_checked):
         if is_checked:
             for row in range(self.tbl_vars.rowCount()):
-                if self.tbl_vars.item(row, 0).text() == var_name:
-                    return
+                if self.tbl_vars.item(row, 0).text() == var_name: return
 
             rows = self.tbl_vars.rowCount()
             self.tbl_vars.insertRow(rows)
@@ -299,7 +280,6 @@ class PlotWindow(QMainWindow):
                     self.tbl_vars.removeRow(i)
                     break
 
-            # Xóa biến khỏi TOÀN BỘ các Scope nếu bị gỡ khỏi UI
             if var_name in self.curves:
                 for scope_idx, curve in list(self.curves[var_name].items()):
                     try:
@@ -311,20 +291,16 @@ class PlotWindow(QMainWindow):
 
     def on_plot_toggled(self, var_name, state):
         scope_idx = self.active_scope_index
-
-        # Khởi tạo từ điển cho biến nếu chưa có
         if var_name not in self.curves:
             self.curves[var_name] = {}
 
         if state == 2:
-            # CHỈ THÊM vào Scope đang được chọn (Không gỡ khỏi Scope cũ)
             if scope_idx not in self.curves[var_name]:
                 target_plot = self.plots[scope_idx]
                 curve = target_plot.plot(name=var_name)
                 self.curves[var_name][scope_idx] = curve
                 self.update_curve_style(var_name)
         else:
-            # Gỡ khỏi Scope đang được chọn
             if scope_idx in self.curves[var_name]:
                 old_plot = self.plots[scope_idx]
                 old_curve = self.curves[var_name][scope_idx]
@@ -335,7 +311,6 @@ class PlotWindow(QMainWindow):
                 old_plot.removeItem(old_curve)
                 del self.curves[var_name][scope_idx]
 
-            # Dọn dẹp bộ nhớ nếu biến không còn hiển thị ở bất kỳ đâu
             if len(self.curves[var_name]) == 0:
                 del self.curves[var_name]
 
@@ -347,7 +322,6 @@ class PlotWindow(QMainWindow):
                 chk_box = chk_widget.findChild(QCheckBox)
                 if chk_box:
                     chk_box.blockSignals(True)
-                    # Nếu biến này đang tồn tại trong Scope hiện tại -> Đánh dấu Tick
                     if var_name in self.curves and self.active_scope_index in self.curves[var_name]:
                         chk_box.setChecked(True)
                     else:
@@ -374,7 +348,6 @@ class PlotWindow(QMainWindow):
 
         pen = pg.mkPen(color=c_map.get(c_name, '#fff'), width=w_val, style=s_map.get(s_name, Qt.PenStyle.SolidLine))
 
-        # ÁP DỤNG MÀU CHO TẤT CẢ ĐƯỜNG CONG CỦA BIẾN NÀY TRÊN MỌI SCOPE
         for scope_idx, curve in self.curves[var_name].items():
             curve.setPen(pen)
 
@@ -390,296 +363,9 @@ class PlotWindow(QMainWindow):
                     x_plot = x_array[-min_len:]
                     y_plot = y_array[-min_len:]
 
-                    # CẬP NHẬT DỮ LIỆU ĐỒNG LOẠT VÀO MỌI SCOPE ĐANG VẼ BIẾN NÀY
                     for scope_idx, curve in scope_curves.items():
                         curve.setData(x=x_plot, y=y_plot)
                         target_plot = self.plots[scope_idx]
                         if len(x_plot) > 0:
                             current_x_max = x_plot[-1]
                             target_plot.setXRange(current_x_max - 5, current_x_max, padding=0)
-
-
-class WebBridge(QObject):
-    def __init__(self, main_app):
-        super().__init__()
-        self.main_app = main_app
-
-    def parse_elf_file_real(self, file_path):
-        from elftools.elf.elffile import ELFFile
-        from elftools.elf.sections import SymbolTableSection
-
-        symbols_dict = {}
-        try:
-            with open(file_path, 'rb') as f:
-                elffile = ELFFile(f)
-
-                for section in elffile.iter_sections():
-                    if isinstance(section, SymbolTableSection):
-                        for symbol in section.iter_symbols():
-                            if symbol['st_info']['type'] == 'STT_OBJECT' and symbol['st_size'] > 0:
-                                var_name = symbol.name
-                                byte_size = symbol['st_size']
-
-                                auto_type = "float32" if byte_size == 4 else ("int16" if byte_size == 2 else "uint8")
-                                symbols_dict[var_name] = {"addr": hex(symbol['st_value']), "type": auto_type}
-
-                if elffile.has_dwarf_info():
-                    print("[ELF Explorer] Đang bóc tách phân vùng DWARF để tìm Type chuẩn...")
-                    dwarfinfo = elffile.get_dwarf_info()
-
-                    for CU in dwarfinfo.iter_CUs():
-                        die_by_offset = {die.offset: die for die in CU.iter_DIEs()}
-
-                        for die in die_by_offset.values():
-                            if die.tag == 'DW_TAG_variable' and 'DW_AT_name' in die.attributes:
-                                var_name = die.attributes['DW_AT_name'].value.decode('utf-8', errors='ignore')
-
-                                if var_name in symbols_dict and 'DW_AT_type' in die.attributes:
-                                    type_offset = die.attributes['DW_AT_type'].value + CU.cu_offset
-
-                                    base_type_die = self.resolve_dwarf_type(die_by_offset, type_offset)
-
-                                    if base_type_die and 'DW_AT_name' in base_type_die.attributes:
-                                        raw_type_name = base_type_die.attributes['DW_AT_name'].value.decode('utf-8',
-                                                                                                            errors='ignore').lower()
-
-                                        if "float" in raw_type_name:
-                                            mapped_type = "float32"
-                                        elif "unsigned char" in raw_type_name or "uint8" in raw_type_name:
-                                            mapped_type = "uint8"
-                                        elif "char" in raw_type_name or "int8" in raw_type_name:
-                                            mapped_type = "int8"
-                                        elif "unsigned short" in raw_type_name or "uint16" in raw_type_name:
-                                            mapped_type = "uint16"
-                                        elif "short" in raw_type_name or "int16" in raw_type_name:
-                                            mapped_type = "int16"
-                                        elif "unsigned int" in raw_type_name or "uint32" in raw_type_name or "unsigned long" in raw_type_name:
-                                            mapped_type = "uint32"
-                                        else:
-                                            mapped_type = "int32"
-
-                                        symbols_dict[var_name]["type"] = mapped_type
-        except Exception as e:
-            print(f"Lỗi phân tích file ELF/DWARF: {e}")
-        return symbols_dict
-
-    def resolve_dwarf_type(self, die_by_offset, type_offset):
-        current_die = die_by_offset.get(type_offset)
-        while current_die:
-            if current_die.tag == 'DW_TAG_base_type':
-                return current_die
-            elif current_die.tag in ('DW_TAG_typedef', 'DW_TAG_const_type', 'DW_TAG_volatile_type'):
-                if 'DW_AT_type' in current_die.attributes:
-                    next_offset = current_die.attributes['DW_AT_type'].value + current_die.cu.cu_offset
-                    current_die = die_by_offset.get(next_offset)
-                else:
-                    break
-            else:
-                break
-        return None
-
-    @pyqtSlot()
-    def js_request_sync(self):
-        json_str = json.dumps(self.main_app.mapping_data)
-        self.main_app.web.page().runJavaScript(f"syncConfig({json_str});")
-
-    @pyqtSlot()
-    def js_load_elf(self):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self.main_app,
-            "Chọn file Firmware ELF",
-            "",
-            "ELF Files (*.elf *.out);;All Files (*)"
-        )
-
-        if file_path:
-            elf_symbols = self.parse_elf_file_real(file_path)
-
-            if not elf_symbols:
-                QMessageBox.warning(self.main_app, "Lỗi", "Không tìm thấy biến toàn cục nào trong file ELF này.")
-                return
-
-            self.main_app.mapping_data = config_manager.sync_addresses_with_elf(self.main_app.mapping_data, elf_symbols)
-            elf_json = json.dumps(elf_symbols)
-            self.main_app.web.page().runJavaScript(f"syncElf({elf_json});")
-            self.js_request_sync()
-            QMessageBox.information(self.main_app, "Thành công",
-                                    f"Đã nạp file ELF:\n{os.path.basename(file_path)}\nTìm thấy {len(elf_symbols)} biến.")
-
-    @pyqtSlot(str, str, str, str)
-    def js_save_mapping(self, block, var_name, var_addr, var_type):
-        self.main_app.mapping_data = config_manager.add_var_to_block(self.main_app.mapping_data, block, var_name,
-                                                                     var_addr, var_type)
-        try:
-            self.main_app.cmd_socket.send_string("RELOAD")
-            print("[Python GUI] ---> HOT-RELOAD UPDATE MAPING RAM!")
-        except Exception as e:
-            print(f"[Python GUI] KHONG THE GUI LENH RELOAD JSON: {e}")
-
-    @pyqtSlot(str, str)
-    def js_remove_mapping(self, block, var_name):
-        self.main_app.mapping_data = config_manager.remove_var_from_block(self.main_app.mapping_data, block, var_name)
-        is_still_exist = False
-        for blk_name, vars_list in self.main_app.mapping_data.items():
-            for v in vars_list:
-                if v.get('id') == var_name:
-                    is_still_exist = True
-                    break
-            if is_still_exist:
-                break
-        if not is_still_exist:
-            self.main_app.plot_win.update_available_vars(var_name, False)
-            print(f"[UI Cleanup] VAR '{var_name}' OUT SCOPE.")
-        try:
-            self.main_app.cmd_socket.send_string("RELOAD")
-            print(f"[Python GUI] ---> HOT-RELOAD UPDATE MAPING RAM (Removed {var_name})!")
-        except Exception as e:
-            print(f"[Python GUI] KHONG THE GUI LENH RELOAD JSON: {e}")
-
-    @pyqtSlot(str, bool)
-    def js_toggle_var_to_plot(self, var_name, is_checked):
-        self.main_app.plot_win.update_available_vars(var_name, is_checked)
-
-    @pyqtSlot()
-    def js_open_plot_window(self):
-        self.main_app.plot_win.show()
-        self.main_app.plot_win.raise_()
-
-    @pyqtSlot(bool)
-    def js_toggle_pause(self, is_paused):
-        if self.main_app.app_state != 'review':
-            self.main_app.app_state = 'paused' if is_paused else 'realtime'
-
-    @pyqtSlot()
-    def js_save_csv(self):
-        QMessageBox.information(self.main_app, "SAVE DATA", "SCOPE EXPORT CSV SUCCESS!")
-
-    @pyqtSlot()
-    def js_load_csv(self):
-        file_name, _ = QFileDialog.getOpenFileName(self.main_app, "Mở file CSV Data", "",
-                                                   "CSV Files (*.csv);;All Files (*)")
-        if file_name:
-            self.main_app.app_state = 'review'
-            self.main_app.web.page().runJavaScript("setAppMode('review');")
-
-    @pyqtSlot(str, str, str)
-    def js_write_data(self, addr_hex, val_str, data_type):
-        try:
-            payload = json.dumps({"addr": addr_hex, "val_str": val_str, "type": data_type})
-            self.main_app.cmd_socket.send_string("WRITE", zmq.SNDMORE)
-            self.main_app.cmd_socket.send_string(payload)
-        except Exception as e:
-            print(f"Lỗi gửi lệnh ghi: {e}")
-
-
-class MainApp(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("STM32 SCOPE")
-        self.resize(1400, 850)
-
-        self.plot_win = PlotWindow()
-        self.app_state = 'offline'
-        self.mapping_data = config_manager.load_mapping()
-
-        self.web = QWebEngineView()
-        self.channel = QWebChannel()
-        self.bridge = WebBridge(self)
-        self.channel.registerObject("py_bridge", self.bridge)
-        self.web.page().setWebChannel(self.channel)
-
-        path = os.path.abspath("foc_diagram.html")
-        self.web.setUrl(QUrl.fromLocalFile(path))
-        self.setCentralWidget(self.web)
-
-        # BỘ NHỚ ĐỆM ĐỒ THỊ
-        self.max_points = 500
-        self.x_history = []
-        self.y_history = {}
-
-        # 1. KẾT NỐI ZMQ
-        self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.SUB)
-        self.socket.connect("tcp://127.0.0.1:5556")
-        self.socket.setsockopt_string(zmq.SUBSCRIBE, "DATA")
-
-        # 2. BỘ ĐỊNH THỜI VẼ ĐỒ THỊ 30 FPS
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.poll_and_update_gui)
-        self.timer.start(30)
-
-        self.cmd_context = zmq.Context()
-        self.cmd_socket = self.cmd_context.socket(zmq.PUB)
-        self.cmd_socket.bind("tcp://127.0.0.1:5557")
-
-    def poll_and_update_gui(self):
-        has_new_data = False
-        latest_payload = None
-        data_dict = None
-
-        # 1. HÚT DỮ LIỆU
-        while True:
-            try:
-                topic = self.socket.recv_string(flags=zmq.NOBLOCK)
-                payload = self.socket.recv_json(flags=zmq.NOBLOCK)
-                latest_payload = payload
-                has_new_data = True
-
-                t = float(payload['timestamp'])
-                data_dict = payload['data']
-
-                self.x_history.append(t)
-                if len(self.x_history) > self.max_points:
-                    self.x_history.pop(0)
-
-                for var_name, val in data_dict.items():
-                    if var_name not in self.y_history:
-                        self.y_history[var_name] = []
-                    self.y_history[var_name].append(float(val))
-                    if len(self.y_history[var_name]) > self.max_points:
-                        self.y_history[var_name].pop(0)
-
-            except zmq.Again:
-                break
-            except Exception as e:
-                print(f"\n[DEBUG LỖI MẠNG ZMQ]: {e}")
-                break
-
-        # 2. XỬ LÝ VÀ IN LOG DEBUG NẾU CÓ DỮ LIỆU
-        if has_new_data and latest_payload:
-
-            danh_sach_duong_ve = list(self.plot_win.curves.keys())
-
-            if len(danh_sach_duong_ve) == 0:
-                print(
-                    " >>> [CẢNH BÁO]: CHƯA CÓ BIẾN NÀO ĐƯỢC VẼ. HÃY TICK CHỌN Ô 'PLOT' TẠI BẢNG VARIABLES <<<")
-
-            if self.app_state == 'offline':
-                self.app_state = 'realtime'
-                self.web.page().runJavaScript("if(typeof setAppMode === 'function') setAppMode('realtime');")
-
-            js_data = json.dumps(latest_payload['data'])
-            self.web.page().runJavaScript(
-                f"if(typeof updateRealtimeData === 'function') updateRealtimeData({js_data});")
-
-            if not self.plot_win.is_paused:
-                plot_dict = {}
-                for var_name in latest_payload['data'].keys():
-                    if var_name in self.y_history:
-                        plot_dict[var_name] = np.array(self.y_history[var_name], dtype=float)
-
-                if self.x_history:
-                    self.plot_win.set_real_data(np.array(self.x_history, dtype=float), plot_dict)
-
-        # READ DATA
-        if data_dict:
-            json_str = json.dumps(data_dict)
-            self.web.page().runJavaScript(f"updateReadDataFromPython('{json_str}')")
-
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    app.setStyle("Fusion")
-    window = MainApp()
-    window.show()
-    sys.exit(app.exec())

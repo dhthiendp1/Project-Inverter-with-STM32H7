@@ -11,14 +11,10 @@
             "type": "float32"
         },
         {
-            "id": "wave_square",
-            "addr": "0x24000084",
-            "type": "float32"
-        },
-        {
             "id": "wave_triangle",
             "addr": "0x24000080",
             "type": "float32"
         }
-    ]
+    ],
+    "CLARKE": []
 }
