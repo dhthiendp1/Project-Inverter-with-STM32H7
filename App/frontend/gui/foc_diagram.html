@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <style>
-        :root { --bg-black: #121212; --panel-bg: #1e1e1e; --accent: #007acc; --border: #333; --text: #d4d4d4; }
+        :root {color-scheme: dark; --bg-black: #121212; --panel-bg: #1e1e1e; --accent: #007acc; --border: #333; --text: #d4d4d4; }
         body { margin: 0; padding: 0; background: var(--bg-black); color: var(--text); font-family: 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
         .status-tabbar { height: 40px; background: #252526; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-bottom: 1px solid var(--border); font-size: 12px; flex-shrink: 0;}
@@ -71,7 +71,7 @@
             <span>MODE: <b id="mode-text" style="color:#777"><i class="led" style="background:#777;"></i>OFFLINE</b></span>
             <span>UPTIME: <b id="uptime" style="font-family: monospace;">00:00:00</b></span>
         </div>
-        <button class="btn" style="background:#28a745; padding: 4px 15px;" onclick="if(backend) backend.js_open_plot_window()">📈 MỞ CỬA SỔ ĐỒ THỊ</button>
+        <button class="btn" style="background:#28a745; padding: 4px 15px;" onclick="if(backend) backend.js_open_plot_window()">📈 SCOPE</button>
     </div>
 
     <div class="workspace" id="workspace">
@@ -92,7 +92,7 @@
         </div>
 
         <div class="pane pane-tr">
-            <div class="pane-header"><span>ELF EXPLORER</span><button class="btn" style="background:#d97706; padding: 4px 8px; font-size:10px;" onclick="if(backend) backend.js_load_elf()">📂 CHỌN FILE ELF</button></div>
+            <div class="pane-header"><span>ELF EXPLORER</span><button class="btn" style="background:#d97706; padding: 4px 8px; font-size:10px;" onclick="if(backend) backend.js_load_elf()">📂 LOAD .ELF</button></div>
             <div class="pane-content" style="padding:0;">
                 <div style="font-size:10px; color:#888; padding:5px 10px;">Gán vào: <b id="add-target-title" style="color:white">Chưa chọn khối</b></div>
                 <div class="table-container">
@@ -237,46 +237,55 @@
                 html += `<tr class="data-row" oncontextmenu="showContextMenu(event, '${v.id}')">
                     <td style="text-align:center;"><input type="checkbox" onchange="if(backend) backend.js_toggle_var_to_plot('${v.id}', this.checked)"></td>
                     <td><b>${v.id}</b></td>
-                    <td>
-                        <select onchange="updateVarType('${v.id}', this.value)" style="background:#111; color:#00a8ff; border:1px solid #444; font-size:11px;">
-                            <option value="float32" ${v.type==='float32'?'selected':''}>float32</option>
-                            <option value="int32" ${v.type==='int32'?'selected':''}>int32</option>
-                            <option value="uint32" ${v.type==='uint32'?'selected':''}>uint32</option>
-                            <option value="int16" ${v.type==='int16'?'selected':''}>int16</option>
-                            <option value="uint16" ${v.type==='uint16'?'selected':''}>uint16</option>
-                            <option value="uint8" ${v.type==='uint8'?'selected':''}>uint8</option>
-                        </select>
-                    </td>
+
+                    <td style="color:#00a8ff; font-weight:bold; font-family:monospace;">${v.type}</td>
+
                     <td style="color:#00a8ff; font-family:monospace;">${v.addr}</td>
                     <td class="val-read" id="read-${v.id}">0.00</td>
                     <td>
-                        <input type="text" placeholder="Enter để ghi"
+                        <input type="text" placeholder="Enter"
                                onkeydown="if(event.key === 'Enter') writeDataToMCU('${v.addr}', this.value, this, '${v.type}')"
-                               style="width: 80%; font-size:11px; background:#111; color:#fff; border:1px solid #555; padding: 2px;">
+                               style="width: 85%; font-size:11px; background:#111; color:#fff; border:1px solid #555; padding: 2px;">
                     </td>
                 </tr>`;
             });
-            if(html === '') html = '<tr><td colspan="6" style="text-align:center; color:#777">Chưa gán biến cho khối này.</td></tr>';
+            if(html === '') html = '<tr><td colspan="6" style="text-align:center; color:#777">Khối này chưa gán biến.</td></tr>';
             document.getElementById('prop-body').innerHTML = html;
         }
 
-        function showContextMenu(e, varName) { e.preventDefault(); varToDelete = varName; const menu = document.getElementById('context-menu'); menu.style.display = 'block'; menu.style.left = e.pageX + 'px'; menu.style.top = e.pageY + 'px'; }
+        function showContextMenu(e, varName) {
+            e.preventDefault(); varToDelete = varName;
+            const menu = document.getElementById('context-menu');
+            menu.style.display = 'block'; menu.style.left = e.pageX + 'px';
+            menu.style.top = e.pageY + 'px'; }
+
         window.addEventListener('click', () => { document.getElementById('context-menu').style.display = 'none'; });
-        function deleteVariable() { if(!activeBlock || !varToDelete) return; blockDB[activeBlock] = blockDB[activeBlock].filter(v => v.id !== varToDelete); renderPropertiesTable(); if(backend) backend.js_remove_mapping(activeBlock, varToDelete); }
-        function togglePause() { if(appState === 'offline' || appState === 'review') return; setAppMode(appState === 'realtime' ? 'paused' : 'realtime'); if(backend) backend.js_toggle_pause(appState === 'paused'); }
+
+        function deleteVariable() {
+            if(!activeBlock || !varToDelete) return;
+            blockDB[activeBlock] = blockDB[activeBlock].filter(v => v.id !== varToDelete);
+            renderPropertiesTable(); if(backend) backend.js_remove_mapping(activeBlock, varToDelete);
+        }
+
+        function togglePause() {
+            if(appState === 'offline' || appState === 'review') return;
+            setAppMode(appState === 'realtime' ? 'paused' : 'realtime');
+            if(backend) backend.js_toggle_pause(appState === 'paused');
+        }
 
         //setInterval(() => { if(appState === 'realtime') { document.querySelectorAll('.val-read').forEach(el => { el.innerText = (Math.random()*10).toFixed(2); }); } }, 1000);
 
         function writeDataToMCU(address, valueStr, inputEl, dataType) {
             if (valueStr.trim() === "") return;
             if (backend) {
-                backend.js_write_data(address, valueStr, dataType); // Bắn cả kiểu dữ liệu qua Python
+                backend.js_write_data(address, valueStr, dataType); // Gửi kèm type tự động xuống Python
                 inputEl.style.borderColor = "#00ff00";
                 inputEl.value = "";
                 inputEl.blur();
                 setTimeout(() => { inputEl.style.borderColor = "#555"; }, 500);
             }
         }
+
         function updateReadDataFromPython(dataJson) {
             const data = JSON.parse(dataJson);
             for (const [varName, value] of Object.entries(data)) {

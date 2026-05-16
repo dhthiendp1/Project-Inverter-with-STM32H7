@@ -46,21 +46,41 @@ namespace FOC {
     float StlinkReader::readMemory(uint32_t addr, const std::string& type) {
         if (!is_connected || sl == nullptr) return 0.0f;
 
-        // Doc 4 byte tu dia chi RAM cua vi dieu khien
-        // Ket qua se duoc luu vao bo dem sl->q_buf
         if (stlink_read_mem32(sl, addr, 4) != 0) {
-            return 0.0f; // Tra ve 0 neu doc loi
+            return 0.0f;
         }
 
         if (type == "float32") {
             float val;
-            // Dung memcpy de copy nguyen trang 4 byte nhi phan vao bien float
-            // Tranh loi ep kieu sai lech gia tri IEEE 754
             std::memcpy(&val, sl->q_buf, 4);
             return val;
         }
-        else {
-            // Mac dinh coi la so nguyen 32-bit neu khong phai float
+        else if (type == "uint8") {
+            uint8_t val;
+            std::memcpy(&val, sl->q_buf, 1);
+            return static_cast<float>(val);
+        }
+        else if (type == "int8") {
+            int8_t val;
+            std::memcpy(&val, sl->q_buf, 1);
+            return static_cast<float>(val);
+        }
+        else if (type == "uint16") {
+            uint16_t val;
+            std::memcpy(&val, sl->q_buf, 2);
+            return static_cast<float>(val);
+        }
+        else if (type == "int16") {
+            int16_t val;
+            std::memcpy(&val, sl->q_buf, 2);
+            return static_cast<float>(val);
+        }
+        else if (type == "uint32") {
+            uint32_t val;
+            std::memcpy(&val, sl->q_buf, 4);
+            return static_cast<float>(val);
+        }
+        else { // Mặc định là int32
             int32_t val;
             std::memcpy(&val, sl->q_buf, 4);
             return static_cast<float>(val);
@@ -79,12 +99,12 @@ namespace FOC {
             else if (type == "uint8" || type == "int8") {
                 uint8_t val = static_cast<uint8_t>(std::stoi(val_str));
                 std::memcpy(sl->q_buf, &val, 1);
-                return (stlink_write_mem8(sl, addr, 1) == 0); // Lệnh ghi đúng 1 byte (Không làm hỏng RAM xung quanh)
+                return (stlink_write_mem8(sl, addr, 1) == 0);
             }
             else if (type == "int16" || type == "uint16") {
                 uint16_t val = static_cast<uint16_t>(std::stoi(val_str));
                 std::memcpy(sl->q_buf, &val, 2);
-                return (stlink_write_mem8(sl, addr, 2) == 0); // stlink dùng mem8 để ghi mảng 2 byte
+                return (stlink_write_mem8(sl, addr, 2) == 0);
             }
             else { // int32 / uint32
                 uint32_t val = static_cast<uint32_t>(std::stoul(val_str));

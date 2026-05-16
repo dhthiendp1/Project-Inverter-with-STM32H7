@@ -18,7 +18,7 @@ import config_manager
 class PlotWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("MCUViewer Pro - Advanced Signal Analyzer")
+        self.setWindowTitle("SCOPE")
         self.resize(1300, 800)
         self.setStyleSheet("background-color: #121212; color: #ddd;")
 
@@ -65,7 +65,7 @@ class PlotWindow(QMainWindow):
         side_layout = QVBoxLayout(self.right_sidebar)
         side_layout.setContentsMargins(5, 0, 5, 5)
 
-        side_layout.addWidget(QLabel("🎨 AVAILABLE VARIABLES & STYLING"))
+        side_layout.addWidget(QLabel("VARIABLES & STYLE"))
         self.tbl_vars = QTableWidget(0, 5)
         self.tbl_vars.setHorizontalHeaderLabels(["Var", "Target", "Color", "Width", "Style"])
         self.tbl_vars.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
@@ -79,8 +79,8 @@ class PlotWindow(QMainWindow):
         side_layout.addWidget(self.tbl_vars, stretch=2)
 
         header_layout = QHBoxLayout()
-        header_layout.addWidget(QLabel("📏 MARKER MEASUREMENTS"))
-        self.chk_markers = QCheckBox("Bật Markers")
+        header_layout.addWidget(QLabel("MARKER MEASUREMENTS"))
+        self.chk_markers = QCheckBox("Markers")
         self.chk_markers.setStyleSheet("color: #00ff00; font-weight: bold;")
         self.chk_markers.stateChanged.connect(self.toggle_markers)
         header_layout.addWidget(self.chk_markers)
@@ -173,7 +173,7 @@ class PlotWindow(QMainWindow):
             p.showAxis('top', show=False)
             p.showAxis('right', show=False)
             if is_sel:
-                p.setLabel('top', f"Scope {i + 1} [SELECTED]", color='#00ff00', bold=True)
+                p.setLabel('top', f"Scope {i + 1} ", color='#00ff00', bold=True)
                 p.vb.setBorder(pg.mkPen('#00ff00', width=2))
             else:
                 p.setLabel('top', f"Scope {i + 1}", color='#888', bold=False)
@@ -350,23 +350,88 @@ class WebBridge(QObject):
         self.main_app = main_app
 
     def parse_elf_file_real(self, file_path):
+        from elftools.elf.elffile import ELFFile
+        from elftools.elf.sections import SymbolTableSection
+
         symbols_dict = {}
         try:
             with open(file_path, 'rb') as f:
                 elffile = ELFFile(f)
-                # Quét qua các phân vùng để tìm Bảng Symbol
+
+                # Bước 1: Quét nhanh bảng mã Symbol tĩnh để lấy Địa chỉ và Kích thước byte
                 for section in elffile.iter_sections():
                     if isinstance(section, SymbolTableSection):
                         for symbol in section.iter_symbols():
-                            # Chỉ lọc lấy các biến Toàn cục (Global Object)
                             if symbol['st_info']['type'] == 'STT_OBJECT' and symbol['st_size'] > 0:
                                 var_name = symbol.name
-                                var_addr = hex(symbol['st_value'])
-                                # Khởi tạo mặc định là float32, bạn có thể đổi trên giao diện sau
-                                symbols_dict[var_name] = {"addr": var_addr, "type": "float32"}
+                                byte_size = symbol['st_size']
+
+                                # Dự phòng kiểu dữ liệu dựa trên kích thước byte nếu file không chứa mã debug
+                                auto_type = "float32" if byte_size == 4 else ("int16" if byte_size == 2 else "uint8")
+                                symbols_dict[var_name] = {"addr": hex(symbol['st_value']), "type": auto_type}
+
+                # Bước 2: THO MÒ DWARF CẤU TRÚC (Giống y hệt STM32 CubeProgrammer)
+                if elffile.has_dwarf_info():
+                    print("[ELF Explorer] Đang bóc tách phân vùng DWARF để tìm Type chuẩn...")
+                    dwarfinfo = elffile.get_dwarf_info()
+
+                    for CU in dwarfinfo.iter_CUs():  # Duyệt qua các file .c thành phần
+                        # Xây dựng bảng tra cứu nhanh các Node thông tin (DIE)
+                        die_by_offset = {die.offset: die for die in CU.iter_DIEs()}
+
+                        for die in die_by_offset.values():
+                            # Nếu Node này khai báo một biến toàn cục
+                            if die.tag == 'DW_TAG_variable' and 'DW_AT_name' in die.attributes:
+                                var_name = die.attributes['DW_AT_name'].value.decode('utf-8', errors='ignore')
+
+                                # Nếu biến này nằm trong danh sách cần giám sát
+                                if var_name in symbols_dict and 'DW_AT_type' in die.attributes:
+                                    type_offset = die.attributes['DW_AT_type'].value + CU.cu_offset
+
+                                    # Gọi hàm giải mã đệ quy để xuyên qua các lớp typedef (ví dụ: uint8_t -> unsigned char)
+                                    base_type_die = self.resolve_dwarf_type(die_by_offset, type_offset)
+
+                                    if base_type_die and 'DW_AT_name' in base_type_die.attributes:
+                                        raw_type_name = base_type_die.attributes['DW_AT_name'].value.decode('utf-8',
+                                                                                                            errors='ignore').lower()
+
+                                        # Ánh xạ từ kiểu dữ liệu C thuần sang kiểu dữ liệu của hệ thống DAQ
+                                        if "float" in raw_type_name:
+                                            mapped_type = "float32"
+                                        elif "unsigned char" in raw_type_name or "uint8" in raw_type_name:
+                                            mapped_type = "uint8"
+                                        elif "char" in raw_type_name or "int8" in raw_type_name:
+                                            mapped_type = "int8"
+                                        elif "unsigned short" in raw_type_name or "uint16" in raw_type_name:
+                                            mapped_type = "uint16"
+                                        elif "short" in raw_type_name or "int16" in raw_type_name:
+                                            mapped_type = "int16"
+                                        elif "unsigned int" in raw_type_name or "uint32" in raw_type_name or "unsigned long" in raw_type_name:
+                                            mapped_type = "uint32"
+                                        else:
+                                            mapped_type = "int32"
+
+                                        # Ghi đè kiểu dữ liệu xịn từ DWARF vào bản đồ biến
+                                        symbols_dict[var_name]["type"] = mapped_type
         except Exception as e:
-            print(f"Lỗi đọc file ELF: {e}")
+            print(f"Lỗi phân tích file ELF/DWARF: {e}")
         return symbols_dict
+
+    # THÊM HÀM PHỤ TRỢ ĐỆ QUY NÀY NGAY PHÍA DƯỚI HÀM TRÊN
+    def resolve_dwarf_type(self, die_by_offset, type_offset):
+        current_die = die_by_offset.get(type_offset)
+        while current_die:
+            if current_die.tag == 'DW_TAG_base_type':
+                return current_die
+            elif current_die.tag in ('DW_TAG_typedef', 'DW_TAG_const_type', 'DW_TAG_volatile_type'):
+                if 'DW_AT_type' in current_die.attributes:
+                    next_offset = current_die.attributes['DW_AT_type'].value + current_die.cu.cu_offset
+                    current_die = die_by_offset.get(next_offset)
+                else:
+                    break
+            else:
+                break
+        return None
 
     @pyqtSlot()
     def js_request_sync(self):
@@ -401,6 +466,11 @@ class WebBridge(QObject):
     def js_save_mapping(self, block, var_name, var_addr, var_type):
         self.main_app.mapping_data = config_manager.add_var_to_block(self.main_app.mapping_data, block, var_name,
                                                                      var_addr, var_type)
+        try:
+            self.main_app.cmd_socket.send_string("RELOAD")
+            print("[Python GUI] ---> HOT-RELOAD UPDATE MAPING RAM!")
+        except Exception as e:
+            print(f"[Python GUI] KHONG THE GUI LENH RELOAD JSON: {e}")
 
     @pyqtSlot(str, str)
     def js_remove_mapping(self, block, var_name):
@@ -446,7 +516,7 @@ class WebBridge(QObject):
 class MainApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("STM32 FOC System Architect")
+        self.setWindowTitle("STM32 SCOPE")
         self.resize(1400, 850)
 
         self.plot_win = PlotWindow()

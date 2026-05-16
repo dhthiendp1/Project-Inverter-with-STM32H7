@@ -20,3 +20,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/third_party/stlink/lib/libstlink.dll.a
     ${CMAKE_SOURCE_DIR}/third_party/libusb/lib/libusb-1.0.dll.a
 )
+
+add_compile_definitions(FRONTEND_JSON_PATH="${CMAKE_CURRENT_SOURCE_DIR}/../frontend/gui/block_mapping.json")
