@@ -1,5 +1,6 @@
 import numpy as np
 import pyqtgraph as pg
+import json
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QLabel, QTableWidget, QTableWidgetItem, QHeaderView,
                              QComboBox, QSplitter, QPushButton, QCheckBox)
@@ -11,7 +12,29 @@ class PlotWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("SCOPE")
         self.resize(1300, 800)
-        self.setStyleSheet("background-color: #121212; color: #ddd;")
+
+        # FIX LỖI CỘT NUMBER TRẮNG & NÂNG CẤP ĐỘ TƯƠNG PHẢN GIAO DIỆN SCOPE
+        self.setStyleSheet("""
+            QMainWindow { background-color: #131314; color: #ffffff; }
+            QWidget { color: #ffffff; font-family: 'Segoe UI', sans-serif; }
+
+            QTableWidget { background-color: #1e1f20; color: #ffffff; border: 1px solid #444746; border-radius: 6px; gridline-color: #333333; font-size: 12px; }
+
+            /* Sửa lỗi cột Vertical Header (Số thứ tự) màu trắng lóa */
+            QHeaderView::section { background-color: #2a2b2e; border: none; border-bottom: 1px solid #444746; border-right: 1px solid #444746; padding: 6px; font-weight: bold; color: #a8c7fa;}
+            QHeaderView::section:vertical { background-color: #1e1f20; color: #a8c7fa; }
+            QTableCornerButton::section { background-color: #1e1f20; border: none; border-bottom: 1px solid #444746; border-right: 1px solid #444746; }
+
+            QTableWidget::item:selected { background-color: rgba(168, 199, 250, 0.2); }
+            QComboBox { font-size: 12px; padding: 4px; background: #2a2b2e; border: 1px solid #444746; border-radius: 4px; color: #ffffff;}
+            QComboBox QAbstractItemView { background: #1e1f20; color: #ffffff; selection-background-color: #a8c7fa; selection-color: #000000; }
+            QPushButton { border-radius: 6px; font-weight: bold; font-size: 12px; background-color: #303134; border: 1px solid #5f6368; padding: 6px 12px; color: #a8c7fa;}
+            QPushButton:hover { background-color: #444746; }
+            QCheckBox { color: #ffffff; spacing: 5px; font-size: 12px; font-weight: bold; }
+            QCheckBox::indicator { width: 18px; height: 18px; border: 1px solid #5f6368; border-radius: 4px; background: #131314; }
+            QCheckBox::indicator:checked { background: #a8c7fa; border-color: #a8c7fa; }
+            QLabel { font-size: 12px; font-weight: bold; color: #a8c7fa; }
+        """)
 
         self.is_paused = False
         self.active_scope_index = 0
@@ -30,13 +53,13 @@ class PlotWindow(QMainWindow):
 
         tbar = QHBoxLayout()
         self.btn_pause = QPushButton("⏸ PAUSE TO MEASURE")
-        self.btn_pause.setStyleSheet("background: #d97706; font-weight: bold; padding: 8px 15px; border-radius: 4px;")
+        self.btn_pause.setStyleSheet(
+            "background: #d97706; font-weight: bold; padding: 8px 15px; border-radius: 4px; color: white; border: none;")
         self.btn_pause.clicked.connect(self.toggle_pause)
         tbar.addWidget(self.btn_pause)
 
         self.cb_layout = QComboBox()
         self.cb_layout.addItems(["1 Plot", "2 Plots (Rows)", "4 Plots (Grid)"])
-        self.cb_layout.setStyleSheet("background: #333; padding: 5px;")
         self.cb_layout.currentIndexChanged.connect(self.update_grid_layout)
         tbar.addWidget(QLabel(" Layout:"))
         tbar.addWidget(self.cb_layout)
@@ -44,7 +67,7 @@ class PlotWindow(QMainWindow):
         mid_layout.addLayout(tbar)
 
         self.gw = pg.GraphicsLayoutWidget()
-        self.gw.setBackground('#121212')
+        self.gw.setBackground('#131314')
         mid_layout.addWidget(self.gw)
         self.splitter.addWidget(self.mid_panel)
         self.gw.scene().sigMouseClicked.connect(self.handle_scene_click)
@@ -62,14 +85,12 @@ class PlotWindow(QMainWindow):
         self.tbl_vars.setColumnWidth(2, 80)
         self.tbl_vars.setColumnWidth(3, 50)
         self.tbl_vars.horizontalHeader().setStretchLastSection(True)
-        self.tbl_vars.setStyleSheet(
-            "QTableWidget { background: #1e1e1e; gridline-color: #333; font-size: 11px; } QComboBox { font-size: 10px; padding: 1px; background: #2d2d2d; border: 1px solid #555; }")
         side_layout.addWidget(self.tbl_vars, stretch=2)
 
         header_layout = QHBoxLayout()
         header_layout.addWidget(QLabel("MARKER MEASUREMENTS"))
         self.chk_markers = QCheckBox("Markers")
-        self.chk_markers.setStyleSheet("color: #00ff00; font-weight: bold;")
+        self.chk_markers.setStyleSheet("color: #6dd68f;")
         self.chk_markers.stateChanged.connect(self.toggle_markers)
         header_layout.addWidget(self.chk_markers)
         side_layout.addLayout(header_layout)
@@ -80,7 +101,6 @@ class PlotWindow(QMainWindow):
         self.tbl_marker.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         self.tbl_marker.setColumnWidth(0, 120)
         self.tbl_marker.horizontalHeader().setStretchLastSection(True)
-        self.tbl_marker.setStyleSheet("background: #1e1e1e; color: #ff9f43; font-size: 11px;")
         self.tbl_marker.itemChanged.connect(self.on_marker_manual_input)
         self.setup_marker_table()
         side_layout.addWidget(self.tbl_marker, stretch=1)
@@ -189,7 +209,7 @@ class PlotWindow(QMainWindow):
         self.is_paused = not self.is_paused
         self.btn_pause.setText("▶ RESUME PLOT" if self.is_paused else "⏸ PAUSE TO MEASURE")
         self.btn_pause.setStyleSheet(
-            f"background: {'#28a745' if self.is_paused else '#d97706'}; font-weight: bold; padding: 8px 15px; border-radius: 4px;")
+            f"background: {'#28a745' if self.is_paused else '#d97706'}; font-weight: bold; padding: 8px 15px; border-radius: 4px; color: white; border:none;")
         self.update_marker_visibility()
 
     def get_y_values_at_x(self, x_val):
@@ -288,6 +308,7 @@ class PlotWindow(QMainWindow):
                         pass
                     self.plots[scope_idx].removeItem(curve)
                 del self.curves[var_name]
+        self.sync_plot_state_to_html()
 
     def on_plot_toggled(self, var_name, state):
         scope_idx = self.active_scope_index
@@ -314,6 +335,8 @@ class PlotWindow(QMainWindow):
             if len(self.curves[var_name]) == 0:
                 del self.curves[var_name]
 
+        self.sync_plot_state_to_html()
+
     def update_var_table_checkboxes(self):
         for row in range(self.tbl_vars.rowCount()):
             var_name = self.tbl_vars.item(row, 0).text()
@@ -327,6 +350,13 @@ class PlotWindow(QMainWindow):
                     else:
                         chk_box.setChecked(False)
                     chk_box.blockSignals(False)
+
+    # ĐỒNG BỘ DẤU TICK XUỐNG HTML MỖI KHI CÓ SỰ THAY ĐỔI
+    def sync_plot_state_to_html(self):
+        if hasattr(self, 'main_app') and self.main_app:
+            plotted_vars = list(self.curves.keys())
+            js_code = f"if(typeof syncPlottedVars === 'function') syncPlottedVars({json.dumps(plotted_vars)});"
+            self.main_app.web.page().runJavaScript(js_code)
 
     def update_curve_style(self, var_name):
         if var_name not in self.curves: return
@@ -347,22 +377,18 @@ class PlotWindow(QMainWindow):
         s_name = self.tbl_vars.cellWidget(row, 4).currentText()
 
         pen = pg.mkPen(color=c_map.get(c_name, '#fff'), width=w_val, style=s_map.get(s_name, Qt.PenStyle.SolidLine))
-
         for scope_idx, curve in self.curves[var_name].items():
             curve.setPen(pen)
 
     def set_real_data(self, x_array, data_dict):
         if self.is_paused: return
-
         for var_name, scope_curves in self.curves.items():
             if var_name in data_dict:
                 y_array = data_dict[var_name]
                 min_len = min(len(x_array), len(y_array))
-
                 if min_len > 1:
                     x_plot = x_array[-min_len:]
                     y_plot = y_array[-min_len:]
-
                     for scope_idx, curve in scope_curves.items():
                         curve.setData(x=x_plot, y=y_plot)
                         target_plot = self.plots[scope_idx]

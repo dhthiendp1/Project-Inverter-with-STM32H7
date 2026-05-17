@@ -5,6 +5,7 @@ import zmq
 from PyQt6.QtWidgets import QMainWindow
 from PyQt6.QtCore import QUrl, QTimer
 from PyQt6.QtWebEngineWidgets import QWebEngineView
+from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
 from PyQt6.QtWebChannel import QWebChannel
 
 import config_manager
@@ -19,18 +20,36 @@ class MainApp(QMainWindow):
         self.resize(1400, 850)
 
         self.plot_win = PlotWindow()
+        self.plot_win.main_app = self
         self.app_state = 'offline'
         self.mapping_data = config_manager.load_mapping()
 
         self.web = QWebEngineView()
-        self.channel = QWebChannel()
-        self.bridge = WebBridge(self)
-        self.channel.registerObject("py_bridge", self.bridge)
-        self.web.page().setWebChannel(self.channel)
 
-        # Trỏ đường dẫn html lùi lại 1 thư mục (vì code này đang ở trong views/)
+        # =================================================================
+        # FIX LỖI: TẠO BỘ NHỚ LƯU TRỮ VĨNH VIỄN CHO LOCALSTORAGE CỦA HTML
+        # =================================================================
+        self.profile = QWebEngineProfile("foc_profile", self.web)
+
+        # Tạo thư mục 'web_storage' nằm cùng cấp với file html để lưu data
         current_dir = os.path.dirname(os.path.abspath(__file__))
         parent_dir = os.path.dirname(current_dir)
+        storage_path = os.path.join(parent_dir, "web_storage")
+
+        self.profile.setPersistentStoragePath(storage_path)
+        self.profile.setPersistentCookiesPolicy(QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies)
+
+        # Gắn Profile có bộ nhớ này vào WebEngine
+        self.page = QWebEnginePage(self.profile, self.web)
+        self.web.setPage(self.page)
+        # =================================================================
+
+        self.channel = QWebChannel()
+        self.bridge = WebBridge(self)
+
+        self.channel.registerObject("backend", self.bridge)
+        self.web.page().setWebChannel(self.channel)
+
         html_path = os.path.join(parent_dir, "foc_diagram.html")
         self.web.setUrl(QUrl.fromLocalFile(html_path))
 

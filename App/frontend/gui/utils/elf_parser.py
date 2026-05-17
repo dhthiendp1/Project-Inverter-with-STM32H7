@@ -9,6 +9,7 @@ class ElfParser:
             with open(file_path, 'rb') as f:
                 elffile = ELFFile(f)
 
+                # Quét bảng Symbol tĩnh
                 for section in elffile.iter_sections():
                     if isinstance(section, SymbolTableSection):
                         for symbol in section.iter_symbols():
@@ -18,6 +19,7 @@ class ElfParser:
                                 auto_type = "float32" if byte_size == 4 else ("int16" if byte_size == 2 else "uint8")
                                 symbols_dict[var_name] = {"addr": hex(symbol['st_value']), "type": auto_type}
 
+                # Phân tích DWARF để lấy định dạng chính xác
                 if elffile.has_dwarf_info():
                     print("[ELF Explorer] Đang bóc tách phân vùng DWARF để tìm Type chuẩn...")
                     dwarfinfo = elffile.get_dwarf_info()

@@ -13,8 +13,33 @@ class WebBridge(QObject):
         super().__init__()
         self.main_app = main_app
 
+    def _get_json_path(self):
+        """Lấy đường dẫn tuyệt đối của block_mapping.json để chống lỗi Path Mismatch khi khởi động lại"""
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        parent_dir = os.path.dirname(current_dir)
+        return os.path.join(parent_dir, "block_mapping.json")
+
+    def _save_json(self):
+        """Hàm dùng chung để lưu ngay cấu trúc mapping xuống ổ cứng chuẩn xác"""
+        json_path = self._get_json_path()
+        try:
+            with open(json_path, 'w') as f:
+                json.dump(self.main_app.mapping_data, f, indent=4)
+        except Exception as e:
+            print(f"[Lỗi] Không thể ghi file JSON: {e}")
+
     @pyqtSlot()
     def js_request_sync(self):
+        # FIX LỖI MẤT BIẾN KHI KHỞI ĐỘNG LẠI:
+        # Ép đọc trực tiếp từ đường dẫn tuyệt đối để đè lên dữ liệu có thể bị lỗi của config_manager
+        json_path = self._get_json_path()
+        try:
+            if os.path.exists(json_path):
+                with open(json_path, 'r') as f:
+                    self.main_app.mapping_data = json.load(f)
+        except Exception as e:
+            print(f"[Cảnh báo] Lỗi đọc JSON đồng bộ: {e}")
+
         json_str = json.dumps(self.main_app.mapping_data)
         self.main_app.web.page().runJavaScript(f"syncConfig({json_str});")
 
@@ -30,16 +55,38 @@ class WebBridge(QObject):
                 return
 
             self.main_app.mapping_data = config_manager.sync_addresses_with_elf(self.main_app.mapping_data, elf_symbols)
+            self._save_json()  # Đồng bộ xong cũng phải lưu
             elf_json = json.dumps(elf_symbols)
             self.main_app.web.page().runJavaScript(f"syncElf({elf_json});")
             self.js_request_sync()
             QMessageBox.information(self.main_app, "Thành công",
                                     f"Đã nạp file ELF:\n{os.path.basename(file_path)}\nTìm thấy {len(elf_symbols)} biến.")
 
+    @pyqtSlot(str)
+    def js_add_block(self, block_id):
+        if block_id not in self.main_app.mapping_data:
+            self.main_app.mapping_data[block_id] = []
+            self._save_json()
+            print(f"[Backend] Đã tạo Block mới: {block_id}")
+
+    @pyqtSlot(str)
+    def js_remove_block(self, block_id):
+        if block_id in self.main_app.mapping_data:
+            del self.main_app.mapping_data[block_id]
+
+        # Bắt buộc lưu đè file JSON để xóa triệt để
+        self._save_json()
+        try:
+            self.main_app.cmd_socket.send_string("RELOAD")
+        except Exception:
+            pass
+        print(f"[Backend] Đã xóa hoàn toàn Block: {block_id}")
+
     @pyqtSlot(str, str, str, str)
     def js_save_mapping(self, block, var_name, var_addr, var_type):
         self.main_app.mapping_data = config_manager.add_var_to_block(self.main_app.mapping_data, block, var_name,
                                                                      var_addr, var_type)
+        self._save_json()  # Bắt buộc phải lưu khi thêm biến
         try:
             self.main_app.cmd_socket.send_string("RELOAD")
         except Exception as e:
@@ -48,6 +95,7 @@ class WebBridge(QObject):
     @pyqtSlot(str, str)
     def js_remove_mapping(self, block, var_name):
         self.main_app.mapping_data = config_manager.remove_var_from_block(self.main_app.mapping_data, block, var_name)
+        self._save_json()  # Bắt buộc phải lưu khi xóa biến
 
         is_still_exist = False
         for blk_name, vars_list in self.main_app.mapping_data.items():
@@ -62,7 +110,7 @@ class WebBridge(QObject):
 
         try:
             self.main_app.cmd_socket.send_string("RELOAD")
-        except Exception as e:
+        except Exception:
             pass
 
     @pyqtSlot(str, bool)
@@ -81,40 +129,33 @@ class WebBridge(QObject):
 
     @pyqtSlot()
     def js_save_csv(self):
-        if not self.main_app.x_history:
-            QMessageBox.warning(self.main_app, "Error", "Chưa có dữ liệu nào để lưu!")
-            return
+        file_path, _ = QFileDialog.getSaveFileName(self.main_app, "Lưu dữ liệu Scope", "FOC_Scope_Data.csv",
+                                                   "CSV Files (*.csv)")
+        if not file_path: return
 
-        # 2. Mở hộp thoại chọn nơi lưu file
-        file_path, _ = QFileDialog.getSaveFileName(
-            self.main_app,
-            "SAVE CSV",
-            "FOC_Data_Export.csv",
-            "CSV Files (*.csv);;All Files (*)"
-        )
+        try:
+            import csv
+            x_data = self.main_app.x_history
+            y_data = self.main_app.y_history
 
-        if file_path:
-            try:
-                import csv
-                with open(file_path, mode='w', newline='') as file:
-                    writer = csv.writer(file)
+            if not x_data:
+                QMessageBox.warning(self.main_app, "Trống", "Biểu đồ đang trống, không có dữ liệu để lưu!")
+                return
 
-                    header = ["Timestamp_sec"] + list(self.main_app.y_history.keys())
-                    writer.writerow(header)
+            headers = ["Time (s)"] + list(y_data.keys())
 
-                    for i in range(len(self.main_app.x_history)):
-                        row = [self.main_app.x_history[i]]
-                        for var_name in self.main_app.y_history.keys():
-                            if i < len(self.main_app.y_history[var_name]):
-                                row.append(self.main_app.y_history[var_name][i])
-                            else:
-                                row.append("")
-                        writer.writerow(row)
+            with open(file_path, mode='w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(headers)
+                for i in range(len(x_data)):
+                    row = [x_data[i]]
+                    for var_name in y_data.keys():
+                        row.append(y_data[var_name][i] if i < len(y_data[var_name]) else 0.0)
+                    writer.writerow(row)
 
-                QMessageBox.information(self.main_app, "Thành công",
-                                        f"Đã xuất dữ liệu ra file:\n{os.path.basename(file_path)}")
-            except Exception as e:
-                QMessageBox.critical(self.main_app, "Error", f"Không thể lưu file CSV: {e}")
+            QMessageBox.information(self.main_app, "Thành công", f"Đã xuất thành công {len(x_data)} dòng dữ liệu!")
+        except Exception as e:
+            QMessageBox.critical(self.main_app, "Lỗi", f"Không thể lưu file CSV: {e}")
 
     @pyqtSlot()
     def js_load_csv(self):

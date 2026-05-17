@@ -3,380 +3,475 @@
 <head>
     <meta charset="UTF-8">
     <style>
-        :root {color-scheme: dark; --bg-black: #121212; --panel-bg: #1e1e1e; --accent: #007acc; --border: #333; --text: #d4d4d4; }
-        body { margin: 0; padding: 0; background: var(--bg-black); color: var(--text); font-family: 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
+        :root { color-scheme: dark; --bg-black: #131314; --panel-bg: #1e1f20; --accent: #a8c7fa; --border: #444746; --text: #e3e3e3; --text-muted: #c4c7c5; --radius-lg: 12px; --radius-sm: 6px;}
+        body { margin: 0; padding: 0; background: var(--bg-black); color: var(--text); font-family: 'Google Sans', 'Segoe UI', system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-        .status-tabbar { height: 40px; background: #252526; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-bottom: 1px solid var(--border); font-size: 12px; flex-shrink: 0;}
+        .status-tabbar { height: 48px; background: var(--bg-black); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid var(--border); z-index: 1000;}
         .stat-group { display: flex; gap: 20px; align-items: center;}
-        .led { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .led { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; box-shadow: 0 0 5px currentColor; }
+        .btn { background: var(--accent); color: #000; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 600; transition: 0.2s;}
+        .btn:hover { background: #d3e3fd; }
 
-        .workspace { position: relative; flex-grow: 1; overflow: hidden; background: var(--bg-black); --x-top: 60%; --x-bot: 60%; --y-left: 55%; --y-right: 55%; }
-        .pane { position: absolute; background: var(--panel-bg); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border); border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);}
+        .main-wrapper { display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; }
+        .top-section { display: flex; flex-grow: 1; overflow: hidden; height: 60%; }
 
-        .pane-tl { top: 5px; bottom: calc(100% - var(--y-left) + 3px); left: 5px; right: calc(100% - var(--x-top) + 3px); }
-        .pane-tr { top: 5px; bottom: calc(100% - var(--y-right) + 3px); left: calc(var(--x-top) + 3px); right: 5px; }
-        .pane-bl { top: calc(var(--y-left) + 3px); bottom: 5px; left: 5px; right: calc(100% - var(--x-bot) + 3px); }
-        .pane-br { top: calc(var(--y-right) + 3px); bottom: 5px; left: calc(var(--x-bot) + 3px); right: 5px; }
+        .workspace-container { flex-grow: 1; position: relative; overflow: hidden; background: #000000; width: 60%; }
+        .resizer-v { width: 6px; background: var(--panel-bg); border-left: 1px solid var(--border); border-right: 1px solid var(--border); cursor: col-resize; z-index: 100; transition: 0.2s;}
+        .resizer-v:hover { background: var(--accent); }
+        .right-panel { width: 40%; background: var(--panel-bg); display: flex; flex-direction: column; z-index: 30; overflow: hidden; }
+        .resizer-h { height: 6px; background: var(--panel-bg); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); cursor: row-resize; z-index: 100; transition: 0.2s;}
+        .resizer-h:hover { background: var(--accent); }
+        .bottom-panel { height: 40%; background: var(--panel-bg); display: flex; flex-direction: column; z-index: 30; overflow: hidden; }
 
-        .resizer { position: absolute; background: transparent; z-index: 100; transition: background 0.2s;}
-        .resizer:hover, .resizer:active { background: var(--accent); }
-        .v-resizer { width: 6px; cursor: col-resize; transform: translateX(-3px); }
-        .h-resizer { height: 6px; cursor: row-resize; transform: translateY(-3px); }
-        #v-resizer-top { top: 0; height: var(--y-left); left: var(--x-top); }
-        #v-resizer-bot { bottom: 0; height: calc(100% - var(--y-left)); left: var(--x-bot); }
-        #h-resizer-left { left: 0; width: var(--x-top); top: var(--y-left); }
-        #h-resizer-right { right: 0; width: calc(100% - var(--x-top)); top: var(--y-right); }
+        #zoom-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform-origin: 0 0; }
+        .block { position: absolute; background: var(--panel-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px 15px; min-width: 140px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 10; cursor: move; user-select: none;}
+        .block.active { border-color: var(--accent); box-shadow: 0 0 15px rgba(168, 199, 250, 0.2); z-index: 20; }
+        .block-title { font-weight: bold; text-align: center; margin-bottom: 5px; font-size: 13px; pointer-events: none; color: var(--accent);}
+        .block-subtitle { text-align: center; font-size: 10px; color: var(--text-muted); pointer-events: none;}
 
-        .pane-header { font-size: 11px; font-weight: bold; color: var(--accent); padding: 10px; border-bottom: 1px solid var(--border); background: #252526; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center;}
-        .pane-content { flex: 1; padding: 10px; overflow: auto; display: flex; flex-direction: column;}
-        .pane-diagram { position: relative; background: #151515; overflow: hidden; cursor: grab; flex: 1;}
-        .pane-diagram:active { cursor: grabbing; }
+        .node { width: 12px; height: 12px; background: var(--bg-black); border-radius: 50%; position: absolute; top: 50%; transform: translateY(-50%); border: 2px solid var(--border); cursor: crosshair; }
+        .node:hover { background: var(--accent); transform: translateY(-50%) scale(1.3); }
+        .node.in { left: -7px; } .node.out { right: -7px; border-color: var(--accent); }
 
-        #diagram-canvas { position: absolute; top: 0; left: 0; width: 3000px; height: 2000px; background-image: radial-gradient(#333 1px, transparent 1px); background-size: 25px 25px; transform-origin: 0 0; }
+        svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; overflow: visible;}
+        .path-line { fill: none; stroke: var(--accent); stroke-width: 2.5; opacity: 0.7; stroke-linejoin: round; pointer-events: auto; }
+        .path-line:hover { stroke: #ff4757; stroke-width: 4px; cursor: pointer; opacity: 1; }
+        .path-line.temp { stroke: #ffeb3b; stroke-dasharray: 5,5; pointer-events: none; }
 
-        /* BẢNG DỮ LIỆU & RESIZE CỘT */
-        .table-container { flex: 1; overflow: auto; border: 1px solid #444; background: #111; }
-        table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; }
-        th { text-align: left; background: #2d2d2d; padding: 6px; color: #aaa; border: 1px solid #444; position: sticky; top: 0; z-index: 10;}
-        td { padding: 4px 6px; border: 1px solid #333; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-        tr.data-row:hover { background: #2a2a2a; }
-        .val-read { color: #4ec9b0; font-family: monospace; font-weight: bold; }
+        .pane-header { padding: 12px 20px; background: rgba(255,255,255,0.03); font-weight: bold; border-bottom: 1px solid var(--border); font-size: 13px; display: flex; justify-content: space-between; align-items: center;}
+        .pane-content { padding: 15px 20px; overflow-y: auto; flex-grow: 1; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; background: var(--bg-black); }
+        th, td { border: 1px solid var(--border); padding: 8px; text-align: left; }
+        th { background: #2a2b2e; color: var(--accent); font-weight: bold; }
+        .data-row:hover { background: rgba(255,255,255,0.05); }
 
-        /* Chỉnh sửa bộ kéo giãn cột cho dễ click hơn */
-        .col-resizer { position: absolute; top: 0; right: -4px; width: 8px; cursor: col-resize; user-select: none; height: 100%; z-index: 20; }
-        .col-resizer:hover { background: rgba(0, 122, 204, 0.5); }
+        input[type="text"] { background: var(--bg-black); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; outline: none; }
+        input[type="text"]:focus { border-color: var(--accent); }
 
-        .btn { background: var(--accent); border: none; color: white; padding: 8px; cursor: pointer; font-weight: bold; border-radius: 3px; }
-        .btn:hover { filter: brightness(1.2); }
-        .btn-add { background: #9b59b6; padding: 2px 6px; border: none; color: white; cursor: pointer; border-radius: 2px; font-weight: bold; font-size: 10px;}
+        .elf-header { display: grid; grid-template-columns: 3fr 1.5fr 1.5fr 80px; font-weight: bold; color: var(--accent); padding: 8px; border-bottom: 1px solid var(--border); font-size: 12px; background: #2a2b2e;}
+        .elf-item { display: grid; grid-template-columns: 3fr 1.5fr 1.5fr 80px; padding: 6px 8px; border-bottom: 1px solid var(--border); align-items: center; font-family: monospace; font-size: 11px;}
+        .elf-item:hover { background: rgba(255,255,255,0.05); }
+        .elf-add-btn { background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 4px 8px; border-radius: 12px; cursor: pointer; font-size: 11px; font-weight: bold;}
+        .elf-add-btn:hover { background: var(--accent); color: #000; }
+        #elf-list { flex-grow: 1; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; }
 
-        #context-menu { position: absolute; display: none; background: #2d2d2d; border: 1px solid #555; box-shadow: 2px 2px 10px rgba(0,0,0,0.8); z-index: 1000; border-radius: 4px; padding: 5px 0; }
-        .context-menu-item { padding: 8px 15px; cursor: pointer; font-size: 12px; color: #fff; }
-        .context-menu-item:hover { background: #d63031; }
+        .context-menu { position: absolute; background: var(--panel-bg); border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: none; z-index: 1000; border-radius: var(--radius-sm); overflow: hidden; padding: 4px 0; min-width: 150px;}
+        .context-menu div { padding: 8px 15px; font-size: 12px; cursor: pointer; color: var(--text);}
+        .context-menu div:hover { background: rgba(255,255,255,0.08); }
 
-        .block { position: absolute; background: #333; border: 1px solid #666; width: 100px; height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; font-size: 10px; z-index: 5; border-radius: 3px;}
-        .block.active { border: 2px solid #00ff00; box-shadow: 0 0 10px rgba(0,255,0,0.3); background: #444;}
-        .b-icon { font-size: 18px; color: #00a8ff; margin-bottom: 4px;}
-        svg#wires { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .wire { fill: none; stroke: #888; stroke-width: 2; stroke-dasharray: 4; animation: flow 1s linear infinite; }
-        @keyframes flow { to { stroke-dashoffset: -20; } }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #555; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #777; }
     </style>
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
 </head>
 <body>
-
     <div class="status-tabbar">
         <div class="stat-group">
-            <span id="conn-status">
-                <span class="led" id="led-conn" style="background: red;"></span>
-                <span id="text-conn">Chưa kết nối</span>
-            </span>
-            <span id="uptime-display" style="font-family: monospace; color: #00a8ff;">UPTIME: 00:00:00</span>
+            <span id="conn-status"><span class="led" id="led-conn" style="background: red;"></span><span id="text-conn">Chưa kết nối</span></span>
+            <span id="uptime-display" style="font-family: monospace; color: #a8c7fa;">UPTIME: 00:00:00</span>
             <span id="mode-display" style="color: #ffeb3b; font-weight: bold;">MODE: OFFLINE</span>
         </div>
-
-        <div class="stat-group" style="gap: 12px;">
-            <button onclick="if(window.backend) backend.js_open_plot_window()" style="background: #007acc;
-             color: white; border: none;
-             padding: 4px 15px;
-             border-radius: 3px;
-             cursor: pointer; font-size: 11px;
-             font-weight: bold; transition: 0.2s;
-             " onmouseover="this.style.background='#0098ff'" onmouseout="this.style.background='#007acc'">📊 SCOPE
-            </button>
-            <button onclick="if(window.backend) backend.js_save_csv()" style="background: #28a745;
-             color: white; border: none;
-              padding: 4px 15px;
-               border-radius: 3px;
-               cursor: pointer;
-               font-size: 11px;
-               font-weight: bold;
-               transition: 0.2s;
-               " onmouseover="this.style.background='#34c759'" onmouseout="this.style.background='#28a745'">💾 SAVE CSV
-            </button>
-            <button onclick="if(window.backend) backend.js_load_csv()" style="background: #d97706;
-            color: white; border: none;
-            padding: 4px 15px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: bold;
-            transition: 0.2s;
-            " onmouseover="this.style.background='#f59e0b'" onmouseout="this.style.background='#d97706'">📂 LOAD CSV
-            </button>
+        <div class="stat-group">
+            <button class="btn" style="background: #e3e3e3; color: #000;" onclick="addNewBlock()">➕ THÊM BLOCK</button>
+            <button class="btn" onclick="if(window.backend) backend.js_open_plot_window()">📊 MỞ SCOPE</button>
+            <button class="btn" style="background: #6dd68f;" onclick="if(window.backend) backend.js_save_csv()">💾 LƯU CSV</button>
         </div>
     </div>
 
-    <div class="workspace" id="workspace">
-        <div class="pane pane-tl">
-            <div class="pane-diagram" id="pane-diagram">
-                <div id="diagram-canvas">
-                    <svg id="wires">
-                        <path class="wire" d="M 150 120 L 250 120" />
-                        <path class="wire" d="M 350 120 L 450 120" />
-                        <path class="wire" d="M 550 120 L 650 120" />
-                    </svg>
-                    <div class="block" style="left: 50px; top: 90px;" onclick="clickBlock('SENSORS')"><div class="b-icon">⚡</div>ADC Sensors</div>
-                    <div class="block" style="left: 250px; top: 90px;" onclick="clickBlock('CLARKE')"><div class="b-icon">⍉</div>Clarke (α,β)</div>
-                    <div class="block" style="left: 450px; top: 90px;" onclick="clickBlock('PARK')"><div class="b-icon">⥀</div>Park (d,q)</div>
-                    <div class="block" style="left: 650px; top: 90px;" onclick="clickBlock('PI_CTRL')"><div class="b-icon">∑</div>PI Control</div>
+    <div class="main-wrapper">
+        <div class="top-section">
+            <div class="workspace-container" id="ws-container">
+                <div id="zoom-layer">
+                    <svg id="svg-layer"></svg>
+                    <svg id="svg-temp-layer" style="z-index: 50;"></svg>
+                </div>
+            </div>
+
+            <div class="resizer-v" id="resizer-v"></div>
+
+            <div class="right-panel" id="right-panel">
+                <div class="pane-header"><span>🗂️ ELF EXPLORER</span><button class="btn" style="width: auto; padding: 4px 10px; margin:0;" onclick="if(window.backend) backend.js_load_elf()">📂 NẠP ELF</button></div>
+                <div class="pane-content" style="display: flex; flex-direction: column;">
+                    <input type="text" class="search-box" id="elf-search" placeholder="🔍 Tìm tên biến..." style="width:100%; margin-bottom:10px;" onkeyup="filterElfList()">
+                    <div class="elf-header"><span>Variable Name</span><span>Type</span><span>Address</span><span>Action</span></div>
+                    <div id="elf-list"><div style="color: #777; padding: 15px; text-align: center;">Chưa nạp file ELF.</div></div>
                 </div>
             </div>
         </div>
 
-        <div class="pane pane-tr">
-            <div class="pane-header"><span>ELF EXPLORER</span><button class="btn" style="background:#d97706; padding: 4px 8px; font-size:10px;" onclick="if(backend) backend.js_load_elf()">📂 LOAD .ELF</button></div>
-            <div class="pane-content" style="padding:0;">
-                <div style="font-size:10px; color:#888; padding:5px 10px;">Gán vào: <b id="add-target-title" style="color:white">Chưa chọn khối</b></div>
-                <div class="table-container">
-                    <table id="tbl-elf">
-                        <thead><tr><th style="width: 15%;">Action</th><th style="width: 40%;">Variable Name</th><th style="width: 25%;">Address</th><th style="width: 20%;">Type</th></tr></thead>
-                        <tbody id="elf-body"><tr><td colspan="4" style="text-align:center; color:#777">Bấm Refresh ELF để tải</td></tr></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+        <div class="resizer-h" id="resizer-h"></div>
 
-        <div class="pane pane-bl">
-            <div class="pane-header">BLOCK PROPERTIES: <span id="prop-title" style="color:white">Chưa chọn</span></div>
-            <div class="pane-content" style="padding:0;">
-                <div class="table-container">
-                    <table id="tbl-prop">
-                        <thead><tr><th style="width: 8%;">Plot</th><th style="width: 28%;">Variable</th><th style="width: 15%;">Type Data</th><th style="width: 15%;">Address</th><th style="width: 14%;">Read Data</th><th style="width: 20%;">Write Data</th></tr></thead>
-                        <tbody id="prop-body"><tr><td colspan="6" style="text-align:center; color:#777">Click vào một Block để xem biến...</td></tr></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div class="pane pane-br">
-            <div class="pane-header">DATA CONTROLS</div>
+        <div class="bottom-panel" id="bottom-panel">
+            <div class="pane-header"><span>⚙️ MAPPING VARIABLES</span><span id="active-block-name" style="color: var(--accent);">[Chưa chọn khối]</span></div>
             <div class="pane-content">
-                <div style="background: #252526; border: 1px solid #444; padding: 10px; border-radius: 4px; display:flex; gap:10px; flex-direction:column;">
-                </div>
+                <table>
+                    <thead><tr><th style="width:50px; text-align:center;">Plot</th><th>Variable Name</th><th>Type</th><th>Address</th><th>Read Data (Realtime)</th><th>Write Data</th></tr></thead>
+                    <tbody id="prop-body">
+                        <tr><td colspan="6" style="text-align:center; color:#777; padding: 20px;">Vui lòng Click vào một Block phía trên.</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-
-        <div id="v-resizer-top" class="resizer v-resizer"></div>
-        <div id="v-resizer-bot" class="resizer v-resizer"></div>
-        <div id="h-resizer-left" class="resizer h-resizer"></div>
-        <div id="h-resizer-right" class="resizer h-resizer"></div>
     </div>
 
-    <div id="context-menu"><div class="context-menu-item" onclick="deleteVariable()">❌ Xóa biến khỏi Block</div></div>
+    <div id="ctx-menu" class="context-menu">
+        <div id="ctx-save-page" onclick="savePageUI()" style="color: #6dd68f; font-weight:bold; display:none;">💾 Save Page (Lưu Layout)</div>
+        <div id="ctx-delete-var" onclick="deleteVariable()" style="display:none;">🗑️ Xóa biến khỏi Block</div>
+        <div id="ctx-delete-block" onclick="deleteBlockUI()" style="display:none; color: #ff4757;">🗑️ Xóa Block</div>
+        <div id="ctx-delete-wire" onclick="deleteWireUI()" style="display:none; color: #ff4757;">✂️ Cắt Dây Nối</div>
+    </div>
 
     <script>
-        // GRID RESIZER
-        const ws = document.getElementById('workspace');
-        function setupGridResizer(id, cssVar, isVertical) {
-            const resizer = document.getElementById(id);
-            resizer.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                const move = (ev) => {
-                    const rect = ws.getBoundingClientRect();
-                    let val = isVertical ? ((ev.clientX - rect.left) / rect.width) * 100 : ((ev.clientY - rect.top) / rect.height) * 100;
-                    ws.style.setProperty(cssVar, `${Math.max(5, Math.min(val, 95))}%`);
-                };
-                const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
-                document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
-            });
-        }
-        setupGridResizer('v-resizer-top', '--x-top', true); setupGridResizer('v-resizer-bot', '--x-bot', true);
-        setupGridResizer('h-resizer-left', '--y-left', false); setupGridResizer('h-resizer-right', '--y-right', false);
+        var backend = null;
+        var blockDB = {};
+        var activeBlock = null;
+        var elfDataGlobal = {};
 
-        // TABLE COLUMN RESIZER
-        function makeTableResizable(tableId) {
-            const table = document.getElementById(tableId);
-            const cols = table.querySelectorAll('th');
-            [].forEach.call(cols, function (col) {
-                const resizer = document.createElement('div');
-                resizer.classList.add('col-resizer');
-                col.appendChild(resizer);
-                let x = 0, w = 0;
-                resizer.addEventListener('mousedown', function (e) {
-                    x = e.clientX; w = col.offsetWidth;
-                    document.addEventListener('mousemove', mouseMoveHandler);
-                    document.addEventListener('mouseup', mouseUpHandler);
-                });
-                const mouseMoveHandler = function (e) { col.style.width = `${w + e.clientX - x}px`; };
-                const mouseUpHandler = function () { document.removeEventListener('mousemove', mouseMoveHandler); document.removeEventListener('mouseup', mouseUpHandler); };
-            });
-        }
-        makeTableResizable('tbl-elf');
-        makeTableResizable('tbl-prop');
+        let scale = 1, panX = 0, panY = 0;
+        let isPanning = false, startPanX = 0, startPanY = 0;
+        const zoomLayer = document.getElementById('zoom-layer');
+        const wsContainer = document.getElementById('ws-container');
 
-        // ZOOM PAN
-        const paneTop = document.getElementById('pane-diagram'); const canvas = document.getElementById('diagram-canvas');
-        let scale = 1, panX = 0, panY = 0, isPanning = false, startX, startY;
-        paneTop.addEventListener('wheel', (e) => { e.preventDefault(); scale += -e.deltaY * 0.001; scale = Math.max(0.3, Math.min(scale, 3)); canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; });
-        paneTop.addEventListener('mousedown', (e) => { if(e.target === paneTop || e.target === canvas || e.target.tagName === 'svg') { isPanning = true; startX = e.clientX - panX; startY = e.clientY - panY; } });
-        window.addEventListener('mousemove', (e) => { if(isPanning) { panX = e.clientX - startX; panY = e.clientY - startY; canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; } });
-        window.addEventListener('mouseup', () => { isPanning = false; });
+        let connections = [];
+        let uiState = { blocks: {}, connections: [] };
+        let draggedBlock = null, offsetX = 0, offsetY = 0;
+        let isWiring = false, wireStartNode = null, wireStartBlockId = null;
 
-        // TƯƠNG TÁC PYTHON
-        var backend; let activeBlock = null; let appState = 'offline'; let blockDB = {}; let elfDB = {}; let varToDelete = null;
-        new QWebChannel(qt.webChannelTransport, function (channel) { backend = channel.objects.py_bridge; backend.js_request_sync(); });
-
-        function clickBlock(name) {
-            const el = event.currentTarget;
-            if (activeBlock === name) {
-                activeBlock = null; el.classList.remove('active');
-                document.getElementById('prop-title').innerText = 'Chưa chọn'; document.getElementById('add-target-title').innerText = 'Chưa chọn khối';
-                document.getElementById('prop-body').innerHTML = '<tr><td colspan="6" style="text-align:center; color:#777">Click vào một Block để xem biến...</td></tr>';
-            } else {
-                activeBlock = name; document.querySelectorAll('.block').forEach(b => b.classList.remove('active')); el.classList.add('active');
-                document.getElementById('prop-title').innerText = name; document.getElementById('add-target-title').innerText = name;
-                renderPropertiesTable();
-            }
-        }
-
-        function syncConfig(jsonConfig) { blockDB = jsonConfig; if(activeBlock) renderPropertiesTable(); }
-        function syncElf(jsonElf) { elfDB = jsonElf; renderElfTable(); }
-        function refreshElf() { if(appState === 'offline') { alert("Chưa kết nối MCU!"); return; } backend.js_refresh_elf(); }
-
-        function setAppMode(mode, probeText = null) {
-        // HÀM ĐỔI TRẠNG THÁI GIAO DIỆN
+        let plottedVars = [];
         var appState = 'offline';
         var uptimeSeconds = 0;
         var uptimeInterval = null;
 
-        function formatUptime(totalSeconds) {
-            const h = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
-            const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
-            const s = (totalSeconds % 60).toString().padStart(2, '0');
-            return `${h}:${m}:${s}`;
+        new QWebChannel(qt.webChannelTransport, function (channel) {
+            window.backend = channel.objects.backend;
+            loadUIState();
+            if(window.backend) window.backend.js_request_sync();
+        });
+
+        // ==========================================
+        // 1. QUẢN LÝ LƯU TRỮ VỊ TRÍ
+        // ==========================================
+        function loadUIState() {
+            const saved = localStorage.getItem('foc_ui_state');
+            if (saved) {
+                uiState = JSON.parse(saved);
+            } else {
+                uiState = { blocks: {}, connections: [] };
+            }
         }
-        function setAppMode(mode) {
-            appState = mode;
-            const modeEl = document.getElementById('mode-display');
-            const ledConn = document.getElementById('led-conn');
-            const textConn = document.getElementById('text-conn');
 
-            // Nếu giao diện chưa load kịp thì thoát ra chờ lần sau
-            if(!modeEl || !ledConn || !textConn) return;
+        // forceSaveUIState(true) -> Hiện thông báo (Dùng cho Save Page)
+        // forceSaveUIState(false) -> Lưu ngầm (Dùng khi Add/Delete block)
+        function forceSaveUIState(showAlert = false) {
+            uiState.blocks = {};
+            document.querySelectorAll('.block').forEach(b => {
+                uiState.blocks[b.id] = { title: b.querySelector('.block-title').innerText, left: b.style.left, top: b.style.top };
+            });
+            uiState.connections = connections;
+            localStorage.setItem('foc_ui_state', JSON.stringify(uiState));
+            if(showAlert) {
+                document.getElementById('ctx-menu').style.display = 'none';
+                alert("Đã lưu Layout Workspace (Vị trí Khối & Dây nối)!");
+            }
+        }
 
-            if(mode === 'realtime') {
-                modeEl.innerText = "MODE: REAL-TIME (ST-LINK)";
-                modeEl.style.color = "#00ff00";
+        function savePageUI() {
+            forceSaveUIState(true);
+        }
 
-                ledConn.style.background = "#00ff00";
-                textConn.innerText = "Đã kết nối MCU";
-                textConn.style.color = "#00ff00";
+        function createBlockElement(id, title, left, top) {
+            if(document.getElementById(id)) return;
+            const div = document.createElement('div');
+            div.className = 'block'; div.id = id; div.style.left = left; div.style.top = top;
+            div.innerHTML = `<div class="block-title">${title}</div><div class="block-subtitle">Custom Layer</div><div class="node in"></div><div class="node out"></div>`;
+            makeBlockInteractive(div);
+            zoomLayer.appendChild(div);
+        }
 
-                if(!uptimeInterval) {
-                    uptimeInterval = setInterval(() => {
-                        uptimeSeconds++;
-                        const upEl = document.getElementById('uptime-display');
-                        if(upEl) upEl.innerText = "UPTIME: " + formatUptime(uptimeSeconds);
-                    }, 1000);
+        function addNewBlock() {
+            const blockId = prompt("Nhập ID của Block mới (Ví dụ: blk_motor):", "blk_" + Date.now());
+            if(!blockId) return;
+            const title = prompt("Nhập Tên hiển thị (Ví dụ: Động cơ PM):", "New Block");
+            if(!title) return;
+            if(document.getElementById(blockId)) { alert("ID này đã tồn tại!"); return; }
+
+            createBlockElement(blockId, title, `${(wsContainer.clientWidth/2 - panX)/scale}px`, `${(wsContainer.clientHeight/2 - panY)/scale}px`);
+            blockDB[blockId] = [];
+            if(window.backend) window.backend.js_add_block(blockId);
+
+            // Ép lưu ngay lập tức để block không bị mất nếu quên bấm Save Page
+            forceSaveUIState(false);
+        }
+
+        // ==========================================
+        // 2. ĐỒNG BỘ TỪ PYTHON (SỰ THẬT TUYỆT ĐỐI)
+        // ==========================================
+        function syncConfig(jsonStr) {
+            const data = JSON.parse(jsonStr);
+            blockDB = {};
+
+            // BƯỚC 1: Cập nhật biến và tạo khối mới (Nếu có trong JSON)
+            for(let key in data) {
+                blockDB[key] = data[key];
+
+                if(!document.getElementById(key)) {
+                    let left = '100px', top = '100px', title = key;
+                    if(uiState.blocks && uiState.blocks[key]) {
+                        left = uiState.blocks[key].left;
+                        top = uiState.blocks[key].top;
+                        title = uiState.blocks[key].title;
+                    }
+                    createBlockElement(key, title, left, top);
                 }
             }
-            else if(mode === 'paused') {
-                modeEl.innerText = "MODE: PAUSED";
-                modeEl.style.color = "#ffeb3b";
+
+            // BƯỚC 2: Xóa triệt để các khối Ma (Có trên UI nhưng đã bị xóa trong JSON)
+            document.querySelectorAll('.block').forEach(b => {
+                if(!data[b.id]) {
+                    b.remove();
+                }
+            });
+
+            // BƯỚC 3: Cập nhật lại dây nối và giao diện
+            if(uiState.connections) {
+                connections = uiState.connections.filter(c => document.getElementById(c.f) && document.getElementById(c.t));
+                drawLines();
             }
-            else if(mode === 'review') {
-                modeEl.innerText = "MODE: REVIEW (CSV)";
-                modeEl.style.color = "#00e5ff";
 
-                clearInterval(uptimeInterval);
-                uptimeInterval = null;
-
-                ledConn.style.background = "#00e5ff";
-                textConn.innerText = "Đọc File Offline";
-                textConn.style.color = "#00e5ff";
+            if(activeBlock && document.getElementById(activeBlock)) {
+                renderPropertiesTable();
+            } else {
+                activeBlock = null;
+                document.getElementById('prop-body').innerHTML = '<tr><td colspan="6" style="text-align:center; color:#777; padding: 20px;">Vui lòng Click vào một Block phía trên.</td></tr>';
             }
         }
 
-        function renderElfTable() {
-            let html = '';
-            for (const [varName, info] of Object.entries(elfDB)) {
-                html += `<tr class="data-row"><td style="text-align:center"><button class="btn-add" onclick="assignFromElf('${varName}', '${info.addr}', '${info.type}')">+ Thêm</button></td><td style="font-weight:bold; color:#fff">${varName}</td><td style="color:#00a8ff; font-family:monospace;">${info.addr}</td><td style="color:#888">${info.type}</td></tr>`;
-            }
-            document.getElementById('elf-body').innerHTML = html;
+        // ==========================================
+        // 3. ZOOM, KÉO KHỐI & NỐI DÂY
+        // ==========================================
+        wsContainer.addEventListener('wheel', e => {
+            if(e.ctrlKey) { e.preventDefault(); scale += e.deltaY * -0.001; scale = Math.min(Math.max(0.4, scale), 3); updateTransform(); }
+        });
+        wsContainer.addEventListener('mousedown', e => {
+            if(e.button === 1 || (e.button === 0 && e.altKey)) { isPanning = true; startPanX = e.clientX - panX; startPanY = e.clientY - panY; wsContainer.style.cursor = 'grabbing'; }
+        });
+        document.addEventListener('mousemove', e => { if(isPanning) { panX = e.clientX - startPanX; panY = e.clientY - startPanY; updateTransform(); } });
+        document.addEventListener('mouseup', () => { isPanning = false; wsContainer.style.cursor = 'default'; });
+        function updateTransform() { zoomLayer.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; }
+
+        function makeBlockInteractive(block) {
+            block.addEventListener('mousedown', e => {
+                if(e.target.classList.contains('node')) return;
+                draggedBlock = block;
+                const zr = zoomLayer.getBoundingClientRect();
+                offsetX = (e.clientX - zr.left) / scale - parseFloat(block.style.left||0);
+                offsetY = (e.clientY - zr.top) / scale - parseFloat(block.style.top||0);
+                setActiveBlock(block.id);
+            });
+            block.querySelectorAll('.node.out').forEach(node => {
+                node.addEventListener('mousedown', e => { isWiring = true; wireStartNode = node; wireStartBlockId = block.id; e.stopPropagation(); });
+            });
+            block.querySelectorAll('.node.in').forEach(node => {
+                node.addEventListener('mouseup', e => {
+                    if(isWiring && wireStartBlockId !== block.id) {
+                        if(!connections.find(c => c.f === wireStartBlockId && c.t === block.id)) {
+                            connections.push({f: wireStartBlockId, t: block.id}); drawLines();
+                        }
+                    }
+                });
+            });
         }
 
-        function assignFromElf(vName, vAddr, vType) {
-            if(!activeBlock) { alert("Click chọn 1 Block trên sơ đồ!"); return; }
-            if(!blockDB[activeBlock]) blockDB[activeBlock] = [];
-            let exists = blockDB[activeBlock].find(x => x.id === vName);
-            if(exists) { exists.addr = vAddr; exists.type = vType; } else { blockDB[activeBlock].push({id: vName, addr: vAddr, type: vType}); }
+        document.addEventListener('mousemove', e => {
+            if(draggedBlock) {
+                const zr = zoomLayer.getBoundingClientRect();
+                draggedBlock.style.left = `${(e.clientX - zr.left) / scale - offsetX}px`;
+                draggedBlock.style.top = `${(e.clientY - zr.top) / scale - offsetY}px`;
+                drawLines();
+            }
+            if(isWiring) {
+                const zr = zoomLayer.getBoundingClientRect(); const r1 = wireStartNode.getBoundingClientRect();
+                let x1 = (r1.left + r1.width/2 - zr.left)/scale; let y1 = (r1.top + r1.height/2 - zr.top)/scale;
+                let x2 = (e.clientX - zr.left)/scale; let y2 = (e.clientY - zr.top)/scale;
+                const midX = (x1 + x2) / 2;
+                document.getElementById('svg-temp-layer').innerHTML = `<path d="M ${x1},${y1} L ${midX},${y1} L ${midX},${y2} L ${x2},${y2}" class="path-line temp"></path>`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if(draggedBlock) { draggedBlock = null; }
+            if(isWiring) { isWiring = false; document.getElementById('svg-temp-layer').innerHTML = ''; }
+        });
+
+        function drawLines() {
+            const svg = document.getElementById('svg-layer'); svg.innerHTML = '';
+            const zr = zoomLayer.getBoundingClientRect();
+            connections.forEach((c, idx) => {
+                const b1 = document.getElementById(c.f); const b2 = document.getElementById(c.t);
+                if(!b1 || !b2) return;
+                const n1 = b1.querySelector('.node.out') || b1; const n2 = b2.querySelector('.node.in') || b2;
+                const r1 = n1.getBoundingClientRect(); const r2 = n2.getBoundingClientRect();
+                let x1 = (r1.left + r1.width/2 - zr.left)/scale; let y1 = (r1.top + r1.height/2 - zr.top)/scale;
+                let x2 = (r2.left + r2.width/2 - zr.left)/scale; let y2 = (r2.top + r2.height/2 - zr.top)/scale;
+                const midX = (x1 + x2) / 2;
+                let d = `M ${x1},${y1} L ${midX},${y1} L ${midX},${y2} L ${x2},${y2}`;
+                svg.innerHTML += `<path d="${d}" class="path-line" data-idx="${idx}"></path>`;
+            });
+        }
+
+        // ==========================================
+        // 4. CHUỘT PHẢI (CONTEXT MENU ĐA NĂNG)
+        // ==========================================
+        let targetBlockId = null, targetWireIdx = -1, varToDelete = null;
+
+        window.addEventListener('contextmenu', e => {
+            if (e.target.closest('#prop-body')) return;
+
+            e.preventDefault();
+            document.getElementById('ctx-save-page').style.display = 'none';
+            document.getElementById('ctx-delete-var').style.display = 'none';
+            document.getElementById('ctx-delete-block').style.display = 'none';
+            document.getElementById('ctx-delete-wire').style.display = 'none';
+
+            if (e.target.classList.contains('path-line')) {
+                targetWireIdx = parseInt(e.target.getAttribute('data-idx'));
+                document.getElementById('ctx-delete-wire').style.display = 'block';
+            } else {
+                const block = e.target.closest('.block');
+                if (block && !e.target.classList.contains('node')) {
+                    targetBlockId = block.id;
+                    document.getElementById('ctx-delete-block').style.display = 'block';
+                } else if (e.target.closest('#ws-container')) {
+                    document.getElementById('ctx-save-page').style.display = 'block';
+                } else {
+                    return;
+                }
+            }
+            const menu = document.getElementById('ctx-menu');
+            menu.style.display = 'block'; menu.style.left = e.pageX + 'px'; menu.style.top = e.pageY + 'px';
+        });
+
+        function showContextMenu(e, type, varName=null) {
+            e.preventDefault(); e.stopPropagation();
+            document.getElementById('ctx-save-page').style.display = 'none';
+            document.getElementById('ctx-delete-var').style.display = 'none';
+            document.getElementById('ctx-delete-block').style.display = 'none';
+            document.getElementById('ctx-delete-wire').style.display = 'none';
+
+            if (type === 'var') { varToDelete = varName; document.getElementById('ctx-delete-var').style.display = 'block'; }
+            const menu = document.getElementById('ctx-menu');
+            menu.style.display = 'block'; menu.style.left = e.pageX + 'px'; menu.style.top = e.pageY + 'px';
+        }
+
+        window.addEventListener('click', () => { document.getElementById('ctx-menu').style.display = 'none'; });
+
+        function deleteBlockUI() {
+            if(!targetBlockId) return;
+            const el = document.getElementById(targetBlockId); if(el) el.remove();
+            connections = connections.filter(c => c.f !== targetBlockId && c.t !== targetBlockId); drawLines();
+            delete blockDB[targetBlockId];
+            if(activeBlock === targetBlockId) { activeBlock = null; renderPropertiesTable(); }
+            if(window.backend) window.backend.js_remove_block(targetBlockId);
+
+            // Ép lưu ngay lập tức để block không bị "sống lại"
+            forceSaveUIState(false);
+        }
+
+        function deleteWireUI() { if(targetWireIdx !== -1) { connections.splice(targetWireIdx, 1); drawLines(); } }
+        function deleteVariable() { if(!activeBlock || !varToDelete) return; blockDB[activeBlock] = blockDB[activeBlock].filter(v => v.id !== varToDelete); renderPropertiesTable(); if(backend) backend.js_remove_mapping(activeBlock, varToDelete); }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Delete') { if (activeBlock && confirm(`Bạn có chắc muốn xóa Block [${activeBlock}]?`)) { targetBlockId = activeBlock; deleteBlockUI(); } }
+        });
+
+        // ==========================================
+        // 5. HIỂN THỊ DỮ LIỆU
+        // ==========================================
+        function syncPlottedVars(varsArray) {
+            plottedVars = varsArray;
+            if(activeBlock) renderPropertiesTable();
+        }
+
+        function togglePlot(varId, isChecked) {
+            if(isChecked && !plottedVars.includes(varId)) plottedVars.push(varId);
+            else if(!isChecked) plottedVars = plottedVars.filter(id => id !== varId);
+            if(window.backend) backend.js_toggle_var_to_plot(varId, isChecked);
+        }
+
+        function setActiveBlock(id) {
+            document.querySelectorAll('.block').forEach(b => b.classList.remove('active'));
+            document.getElementById(id).classList.add('active'); activeBlock = id;
+            document.getElementById('active-block-name').innerText = document.querySelector(`#${id} .block-title`).innerText;
             renderPropertiesTable();
-            if(backend) backend.js_save_mapping(activeBlock, vName, vAddr, vType);
+        }
+
+        function syncElf(elfJson) { elfDataGlobal = elfJson; renderElfList(); }
+        function filterElfList() { renderElfList(document.getElementById('elf-search').value); }
+        function renderElfList(filterText = '') {
+            const listDiv = document.getElementById('elf-list'); listDiv.innerHTML = '';
+            const filterUpper = filterText.toUpperCase();
+            for (const [varName, info] of Object.entries(elfDataGlobal)) {
+                if (filterUpper && !varName.toUpperCase().includes(filterUpper)) continue;
+                listDiv.innerHTML += `<div class="elf-item"><span style="color:#fff;">${varName}</span><span style="color:#888;">${info.type}</span><span style="color:#a8c7fa;">${info.addr}</span><button class="elf-add-btn" onclick="addVarToActiveBlock('${varName}', '${info.addr}', '${info.type}')">Thêm</button></div>`;
+            }
+        }
+
+        function addVarToActiveBlock(varName, addr, type) {
+            if (!activeBlock) { alert("Vui lòng click chọn một Block bên trên!"); return; }
+            if (blockDB[activeBlock].find(v => v.id === varName)) return;
+            blockDB[activeBlock].push({ id: varName, addr: addr, type: type });
+            if (window.backend) window.backend.js_save_mapping(activeBlock, varName, addr, type);
+            renderPropertiesTable();
         }
 
         function renderPropertiesTable() {
-            const vars = blockDB[activeBlock] || [];
-            let html = '';
+            const vars = blockDB[activeBlock] || []; let html = '';
             vars.forEach(v => {
-                html += `<tr class="data-row" oncontextmenu="showContextMenu(event, '${v.id}')">
-                    <td style="text-align:center;"><input type="checkbox" onchange="if(backend) backend.js_toggle_var_to_plot('${v.id}', this.checked)"></td>
-                    <td><b>${v.id}</b></td>
-
-                    <td style="color:#00a8ff; font-weight:bold; font-family:monospace;">${v.type}</td>
-
-                    <td style="color:#00a8ff; font-family:monospace;">${v.addr}</td>
+                const isChecked = plottedVars.includes(v.id) ? 'checked' : '';
+                html += `<tr class="data-row" oncontextmenu="showContextMenu(event, 'var', '${v.id}')">
+                    <td style="text-align:center;"><input type="checkbox" ${isChecked} onchange="togglePlot('${v.id}', this.checked)"></td>
+                    <td style="color:#fff; font-weight:bold;">${v.id}</td><td style="color:#a8c7fa;">${v.type}</td><td style="color:#888;">${v.addr}</td>
                     <td class="val-read" id="read-${v.id}">0.00</td>
-                    <td>
-                        <input type="text" placeholder="Enter"
-                               onkeydown="if(event.key === 'Enter') writeDataToMCU('${v.addr}', this.value, this, '${v.type}')"
-                               style="width: 85%; font-size:11px; background:#111; color:#fff; border:1px solid #555; padding: 2px;">
-                    </td>
+                    <td><input type="text" placeholder="Gõ số & Enter..." onkeydown="if(event.key === 'Enter') writeDataToMCU('${v.addr}', this.value, this, '${v.type}')" style="width: 90%;"></td>
                 </tr>`;
             });
-            if(html === '') html = '<tr><td colspan="6" style="text-align:center; color:#777">Khối này chưa gán biến.</td></tr>';
-            document.getElementById('prop-body').innerHTML = html;
+            document.getElementById('prop-body').innerHTML = html || '<tr><td colspan="6" style="text-align:center; padding: 20px; color:#777">Chưa gán biến. Hãy chọn từ ELF Explorer ở trên.</td></tr>';
         }
-
-        function showContextMenu(e, varName) {
-            e.preventDefault(); varToDelete = varName;
-            const menu = document.getElementById('context-menu');
-            menu.style.display = 'block'; menu.style.left = e.pageX + 'px';
-            menu.style.top = e.pageY + 'px'; }
-
-        window.addEventListener('click', () => { document.getElementById('context-menu').style.display = 'none'; });
-
-        function deleteVariable() {
-            if(!activeBlock || !varToDelete) return;
-            blockDB[activeBlock] = blockDB[activeBlock].filter(v => v.id !== varToDelete);
-            renderPropertiesTable(); if(backend) backend.js_remove_mapping(activeBlock, varToDelete);
-        }
-
-        function togglePause() {
-            if(appState === 'offline' || appState === 'review') return;
-            setAppMode(appState === 'realtime' ? 'paused' : 'realtime');
-            if(backend) backend.js_toggle_pause(appState === 'paused');
-        }
-
-        //setInterval(() => { if(appState === 'realtime') { document.querySelectorAll('.val-read').forEach(el => { el.innerText = (Math.random()*10).toFixed(2); }); } }, 1000);
 
         function writeDataToMCU(address, valueStr, inputEl, dataType) {
             if (valueStr.trim() === "") return;
-            if (backend) {
-                backend.js_write_data(address, valueStr, dataType); // Gửi kèm type tự động xuống Python
-                inputEl.style.borderColor = "#00ff00";
-                inputEl.value = "";
-                inputEl.blur();
-                setTimeout(() => { inputEl.style.borderColor = "#555"; }, 500);
-            }
+            if (window.backend) { backend.js_write_data(address, valueStr, dataType); inputEl.value = ""; inputEl.blur(); }
         }
 
+        function setAppMode(mode) {
+            appState = mode;
+            if(mode === 'realtime') {
+                document.getElementById('mode-display').innerText = "MODE: REAL-TIME";
+                document.getElementById('led-conn').style.background = "#00ff00"; document.getElementById('text-conn').innerText = "Đã kết nối MCU";
+                if(!uptimeInterval) {
+                    uptimeInterval = setInterval(() => { uptimeSeconds++; const h = Math.floor(uptimeSeconds/3600).toString().padStart(2, '0'); const m = Math.floor((uptimeSeconds%3600)/60).toString().padStart(2, '0'); const s = (uptimeSeconds%60).toString().padStart(2, '0'); document.getElementById('uptime-display').innerText = `UPTIME: ${h}:${m}:${s}`; }, 1000);
+                }
+            }
+        }
+        function updateRealtimeData(data) { if (appState === 'offline') setAppMode('realtime'); }
         function updateReadDataFromPython(dataJson) {
             const data = JSON.parse(dataJson);
-            for (const [varName, value] of Object.entries(data)) {
-                const el = document.getElementById(`read-${varName}`);
-                if (el) el.innerText = value.toFixed(4);
-            }
+            for (const [varName, value] of Object.entries(data)) { const el = document.getElementById(`read-${varName}`); if (el) el.innerText = value.toFixed(4); }
         }
 
-        function updateVarType(varId, newType) {
-            const v = blockDB[activeBlock].find(x => x.id === varId);
-            if(v) {
-                v.type = newType;
-                if(backend) backend.js_save_mapping(activeBlock, v.id, v.addr, newType); // Tự động lưu json
-                renderPropertiesTable(); // Cập nhật lại giao diện
-            }
-        }}
+        const resizerV = document.getElementById('resizer-v'); const resizerH = document.getElementById('resizer-h');
+        let isResizingV = false, isResizingH = false;
+        resizerV.addEventListener('mousedown', () => { isResizingV = true; document.body.style.cursor = 'col-resize'; });
+        resizerH.addEventListener('mousedown', () => { isResizingH = true; document.body.style.cursor = 'row-resize'; });
+        document.addEventListener('mousemove', (e) => {
+            if (isResizingV) { const rightW = document.body.clientWidth - e.clientX - 3; if(rightW > 300 && rightW < 800) { document.getElementById('right-panel').style.width = `${rightW}px`; document.getElementById('ws-container').style.width = `calc(100% - ${rightW}px - 6px)`; } }
+            if (isResizingH) { const bottomH = document.querySelector('.main-wrapper').clientHeight - e.clientY + 48; if(bottomH > 150 && bottomH < 600) { document.getElementById('bottom-panel').style.height = `${bottomH}px`; document.querySelector('.top-section').style.height = `calc(100% - ${bottomH}px - 6px)`; } }
+        });
+        document.addEventListener('mouseup', () => { isResizingV = false; isResizingH = false; document.body.style.cursor = 'default'; drawLines(); });
+
+        window.addEventListener('resize', drawLines); setTimeout(drawLines, 200);
     </script>
 </body>
 </html>
