@@ -81,7 +81,40 @@ class WebBridge(QObject):
 
     @pyqtSlot()
     def js_save_csv(self):
-        QMessageBox.information(self.main_app, "SAVE DATA", "SCOPE EXPORT CSV SUCCESS!")
+        if not self.main_app.x_history:
+            QMessageBox.warning(self.main_app, "Error", "Chưa có dữ liệu nào để lưu!")
+            return
+
+        # 2. Mở hộp thoại chọn nơi lưu file
+        file_path, _ = QFileDialog.getSaveFileName(
+            self.main_app,
+            "SAVE CSV",
+            "FOC_Data_Export.csv",
+            "CSV Files (*.csv);;All Files (*)"
+        )
+
+        if file_path:
+            try:
+                import csv
+                with open(file_path, mode='w', newline='') as file:
+                    writer = csv.writer(file)
+
+                    header = ["Timestamp_sec"] + list(self.main_app.y_history.keys())
+                    writer.writerow(header)
+
+                    for i in range(len(self.main_app.x_history)):
+                        row = [self.main_app.x_history[i]]
+                        for var_name in self.main_app.y_history.keys():
+                            if i < len(self.main_app.y_history[var_name]):
+                                row.append(self.main_app.y_history[var_name][i])
+                            else:
+                                row.append("")
+                        writer.writerow(row)
+
+                QMessageBox.information(self.main_app, "Thành công",
+                                        f"Đã xuất dữ liệu ra file:\n{os.path.basename(file_path)}")
+            except Exception as e:
+                QMessageBox.critical(self.main_app, "Error", f"Không thể lưu file CSV: {e}")
 
     @pyqtSlot()
     def js_load_csv(self):

@@ -67,11 +67,44 @@
 
     <div class="status-tabbar">
         <div class="stat-group">
-            <span id="probe-info" style="color:#777"><b>Chưa kết nối</b> | <span style="color:#555">Đang dò tìm...</span></span>
-            <span>MODE: <b id="mode-text" style="color:#777"><i class="led" style="background:#777;"></i>OFFLINE</b></span>
-            <span>UPTIME: <b id="uptime" style="font-family: monospace;">00:00:00</b></span>
+            <span id="conn-status">
+                <span class="led" id="led-conn" style="background: red;"></span>
+                <span id="text-conn">Chưa kết nối</span>
+            </span>
+            <span id="uptime-display" style="font-family: monospace; color: #00a8ff;">UPTIME: 00:00:00</span>
+            <span id="mode-display" style="color: #ffeb3b; font-weight: bold;">MODE: OFFLINE</span>
         </div>
-        <button class="btn" style="background:#28a745; padding: 4px 15px;" onclick="if(backend) backend.js_open_plot_window()">📈 SCOPE</button>
+
+        <div class="stat-group" style="gap: 12px;">
+            <button onclick="if(window.backend) backend.js_open_plot_window()" style="background: #007acc;
+             color: white; border: none;
+             padding: 4px 15px;
+             border-radius: 3px;
+             cursor: pointer; font-size: 11px;
+             font-weight: bold; transition: 0.2s;
+             " onmouseover="this.style.background='#0098ff'" onmouseout="this.style.background='#007acc'">📊 SCOPE
+            </button>
+            <button onclick="if(window.backend) backend.js_save_csv()" style="background: #28a745;
+             color: white; border: none;
+              padding: 4px 15px;
+               border-radius: 3px;
+               cursor: pointer;
+               font-size: 11px;
+               font-weight: bold;
+               transition: 0.2s;
+               " onmouseover="this.style.background='#34c759'" onmouseout="this.style.background='#28a745'">💾 SAVE CSV
+            </button>
+            <button onclick="if(window.backend) backend.js_load_csv()" style="background: #d97706;
+            color: white; border: none;
+            padding: 4px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+            transition: 0.2s;
+            " onmouseover="this.style.background='#f59e0b'" onmouseout="this.style.background='#d97706'">📂 LOAD CSV
+            </button>
+        </div>
     </div>
 
     <div class="workspace" id="workspace">
@@ -120,9 +153,6 @@
             <div class="pane-header">DATA CONTROLS</div>
             <div class="pane-content">
                 <div style="background: #252526; border: 1px solid #444; padding: 10px; border-radius: 4px; display:flex; gap:10px; flex-direction:column;">
-                    <button class="btn" id="btn-pause" style="background:#ff9f43" onclick="togglePause()">⏸ STOP PLOT</button>
-                    <button class="btn" style="background:#00a8ff" onclick="if(backend) backend.js_save_csv()">💾 SAVE DATA (.CSV)</button>
-                    <button class="btn" style="background:#9b59b6" onclick="if(backend) backend.js_load_csv()">📂 LOAD DATA (REVIEW)</button>
                 </div>
             </div>
         </div>
@@ -205,12 +235,57 @@
         function refreshElf() { if(appState === 'offline') { alert("Chưa kết nối MCU!"); return; } backend.js_refresh_elf(); }
 
         function setAppMode(mode, probeText = null) {
-            appState = mode; const textEl = document.getElementById('mode-text'); const probeEl = document.getElementById('probe-info'); const btnPause = document.getElementById('btn-pause');
-            if (probeText) probeEl.innerHTML = `<b style="color:white">${probeText.split('|')[0]}</b> | <span style="color:#00a8ff">${probeText.split('|')[1]}</span>`;
-            if (mode === 'offline') { textEl.innerHTML = "<i class='led' style='background:#777;'></i>OFFLINE"; textEl.style.color = "#777"; btnPause.disabled = true; }
-            else if (mode === 'realtime') { textEl.innerHTML = "<i class='led' style='background:#00ff00; box-shadow: 0 0 8px #00ff00;'></i>REAL-TIME"; textEl.style.color = "#00ff00"; btnPause.innerHTML = "⏸ TẠM DỪNG PLOT"; btnPause.style.background = "#ff9f43"; btnPause.disabled = false; }
-            else if (mode === 'paused') { textEl.innerHTML = "<i class='led' style='background:#ffcc00; box-shadow: 0 0 8px #ffcc00;'></i>PAUSED"; textEl.style.color = "#ffcc00"; btnPause.innerHTML = "▶ TIẾP TỤC PLOT"; btnPause.style.background = "#28a745"; }
-            else if (mode === 'review') { textEl.innerHTML = "<i class='led' style='background:#9b59b6; box-shadow: 0 0 8px #9b59b6;'></i>REVIEW DATA"; textEl.style.color = "#9b59b6"; btnPause.disabled = true; }
+        // HÀM ĐỔI TRẠNG THÁI GIAO DIỆN
+        var appState = 'offline';
+        var uptimeSeconds = 0;
+        var uptimeInterval = null;
+
+        function formatUptime(totalSeconds) {
+            const h = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+            const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+            const s = (totalSeconds % 60).toString().padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
+        function setAppMode(mode) {
+            appState = mode;
+            const modeEl = document.getElementById('mode-display');
+            const ledConn = document.getElementById('led-conn');
+            const textConn = document.getElementById('text-conn');
+
+            // Nếu giao diện chưa load kịp thì thoát ra chờ lần sau
+            if(!modeEl || !ledConn || !textConn) return;
+
+            if(mode === 'realtime') {
+                modeEl.innerText = "MODE: REAL-TIME (ST-LINK)";
+                modeEl.style.color = "#00ff00";
+
+                ledConn.style.background = "#00ff00";
+                textConn.innerText = "Đã kết nối MCU";
+                textConn.style.color = "#00ff00";
+
+                if(!uptimeInterval) {
+                    uptimeInterval = setInterval(() => {
+                        uptimeSeconds++;
+                        const upEl = document.getElementById('uptime-display');
+                        if(upEl) upEl.innerText = "UPTIME: " + formatUptime(uptimeSeconds);
+                    }, 1000);
+                }
+            }
+            else if(mode === 'paused') {
+                modeEl.innerText = "MODE: PAUSED";
+                modeEl.style.color = "#ffeb3b";
+            }
+            else if(mode === 'review') {
+                modeEl.innerText = "MODE: REVIEW (CSV)";
+                modeEl.style.color = "#00e5ff";
+
+                clearInterval(uptimeInterval);
+                uptimeInterval = null;
+
+                ledConn.style.background = "#00e5ff";
+                textConn.innerText = "Đọc File Offline";
+                textConn.style.color = "#00e5ff";
+            }
         }
 
         function renderElfTable() {
@@ -301,7 +376,7 @@
                 if(backend) backend.js_save_mapping(activeBlock, v.id, v.addr, newType); // Tự động lưu json
                 renderPropertiesTable(); // Cập nhật lại giao diện
             }
-        }
+        }}
     </script>
 </body>
 </html>
