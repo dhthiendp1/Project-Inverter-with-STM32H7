@@ -1,5 +1,7 @@
 import os
 import json
+import time
+import tempfile
 import numpy as np
 import zmq
 from PyQt6.QtWidgets import QMainWindow
@@ -16,7 +18,7 @@ from controllers.web_bridge import WebBridge
 class MainApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("STM32 SCOPE - DAQ HỆ THỐNG ĐIỀU KHIỂN ĐỘNG CƠ")
+        self.setWindowTitle("SCOPE")
         self.resize(1400, 850)
 
         self.plot_win = PlotWindow()
@@ -25,13 +27,8 @@ class MainApp(QMainWindow):
         self.mapping_data = config_manager.load_mapping()
 
         self.web = QWebEngineView()
-
-        # =================================================================
-        # FIX LỖI: TẠO BỘ NHỚ LƯU TRỮ VĨNH VIỄN CHO LOCALSTORAGE CỦA HTML
-        # =================================================================
         self.profile = QWebEngineProfile("foc_profile", self.web)
 
-        # Tạo thư mục 'web_storage' nằm cùng cấp với file html để lưu data
         current_dir = os.path.dirname(os.path.abspath(__file__))
         parent_dir = os.path.dirname(current_dir)
         storage_path = os.path.join(parent_dir, "web_storage")
@@ -39,10 +36,8 @@ class MainApp(QMainWindow):
         self.profile.setPersistentStoragePath(storage_path)
         self.profile.setPersistentCookiesPolicy(QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies)
 
-        # Gắn Profile có bộ nhớ này vào WebEngine
         self.page = QWebEnginePage(self.profile, self.web)
         self.web.setPage(self.page)
-        # =================================================================
 
         self.channel = QWebChannel()
         self.bridge = WebBridge(self)
@@ -59,7 +54,11 @@ class MainApp(QMainWindow):
         self.x_history = []
         self.y_history = {}
 
-        # MẠNG ZERO MQ
+        # LOGIC CHECK NGẮT KẾT NỐI VÀ FILE ẢO LƯU CSV
+        self.last_recv_time = time.time()
+        self.temp_log_path = os.path.join(tempfile.gettempdir(), "foc_daq_temp.jsonl")
+        open(self.temp_log_path, 'w').close()  # Xóa data phiên trước
+
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.SUB)
         self.socket.connect("tcp://127.0.0.1:5556")
@@ -84,10 +83,17 @@ class MainApp(QMainWindow):
                 payload = self.socket.recv_json(flags=zmq.NOBLOCK)
                 latest_payload = payload
                 has_new_data = True
+                self.last_recv_time = time.time()  # Reset đồng hồ đo timeout
 
                 t = float(payload['timestamp'])
                 data_dict = payload['data']
 
+                # LƯU FILE ẢO JSON LINE (TỐN ÍT BỘ NHỚ RAM NHẤT) ĐỂ XUẤT CSV SAU
+                with open(self.temp_log_path, 'a') as f:
+                    json.dump({"t": t, "d": data_dict}, f)
+                    f.write('\n')
+
+                # HIỂN THỊ CHOPPING ĐỂ KHÔNG TRÀN RAM GIAO DIỆN
                 self.x_history.append(t)
                 if len(self.x_history) > self.max_points:
                     self.x_history.pop(0)
@@ -102,7 +108,6 @@ class MainApp(QMainWindow):
             except zmq.Again:
                 break
             except Exception as e:
-                print(f"\n[DEBUG LỖI MẠNG ZMQ]: {e}")
                 break
 
         if has_new_data and latest_payload:
@@ -126,3 +131,8 @@ class MainApp(QMainWindow):
         if data_dict:
             json_str = json.dumps(data_dict)
             self.web.page().runJavaScript(f"updateReadDataFromPython('{json_str}')")
+
+        # CHECK TIMEOUT
+        if self.app_state == 'realtime' and (time.time() - self.last_recv_time > 1.5):
+            self.app_state = 'offline'
+            self.web.page().runJavaScript("if(typeof setAppMode === 'function') setAppMode('offline');")

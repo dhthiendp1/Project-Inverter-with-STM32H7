@@ -5,39 +5,38 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
         :root { color-scheme: dark; --bg-black: #131314; --panel-bg: #1e1f20; --accent: #a8c7fa; --border: #444746; --text: #e3e3e3; --text-muted: #c4c7c5; --radius-lg: 12px; --radius-sm: 6px;}
-        body { margin: 0; padding: 0; background: var(--bg-black); color: var(--text); font-family: 'Google Sans', 'Segoe UI', system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        body { margin: 0; padding: 0; background: var(--bg-black); color: var(--text); font-family: 'Google Sans', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
         .status-tabbar { height: 48px; background: var(--bg-black); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid var(--border); z-index: 1000;}
         .stat-group { display: flex; gap: 20px; align-items: center;}
-        .led { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; box-shadow: 0 0 5px currentColor; }
-        .btn { background: var(--accent); color: #000; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 600; transition: 0.2s;}
-        .btn:hover { background: #d3e3fd; }
+        .led { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; box-shadow: 0 0 5px currentColor; transition: 0.3s;}
+        .btn { background: var(--accent); color: #000; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 600;}
 
         .main-wrapper { display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; }
         .top-section { display: flex; flex-grow: 1; overflow: hidden; height: 60%; }
 
-        .workspace-container { flex-grow: 1; position: relative; overflow: hidden; background: #000000; width: 60%; }
-        .resizer-v { width: 6px; background: var(--panel-bg); border-left: 1px solid var(--border); border-right: 1px solid var(--border); cursor: col-resize; z-index: 100; transition: 0.2s;}
-        .resizer-v:hover { background: var(--accent); }
+        .workspace-container { flex-grow: 1; position: relative; overflow: hidden; background: #000000; width: 60%; cursor: grab;}
+        .workspace-container:active { cursor: grabbing; }
+        .resizer-v { width: 6px; background: var(--panel-bg); border-left: 1px solid var(--border); border-right: 1px solid var(--border); cursor: col-resize; z-index: 100;}
         .right-panel { width: 40%; background: var(--panel-bg); display: flex; flex-direction: column; z-index: 30; overflow: hidden; }
-        .resizer-h { height: 6px; background: var(--panel-bg); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); cursor: row-resize; z-index: 100; transition: 0.2s;}
-        .resizer-h:hover { background: var(--accent); }
+        .resizer-h { height: 6px; background: var(--panel-bg); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); cursor: row-resize; z-index: 100;}
         .bottom-panel { height: 40%; background: var(--panel-bg); display: flex; flex-direction: column; z-index: 30; overflow: hidden; }
 
         #zoom-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform-origin: 0 0; }
-        .block { position: absolute; background: var(--panel-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px 15px; min-width: 140px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 10; cursor: move; user-select: none;}
-        .block.active { border-color: var(--accent); box-shadow: 0 0 15px rgba(168, 199, 250, 0.2); z-index: 20; }
-        .block-title { font-weight: bold; text-align: center; margin-bottom: 5px; font-size: 13px; pointer-events: none; color: var(--accent);}
-        .block-subtitle { text-align: center; font-size: 10px; color: var(--text-muted); pointer-events: none;}
 
-        .node { width: 12px; height: 12px; background: var(--bg-black); border-radius: 50%; position: absolute; top: 50%; transform: translateY(-50%); border: 2px solid var(--border); cursor: crosshair; }
-        .node:hover { background: var(--accent); transform: translateY(-50%) scale(1.3); }
-        .node.in { left: -7px; } .node.out { right: -7px; border-color: var(--accent); }
+        .block { position: absolute; background: var(--panel-bg); border: 2px solid #555; border-radius: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 10; cursor: pointer; user-select: none; box-sizing: border-box;}
+        .block.active { border-color: var(--accent); box-shadow: 0 0 15px rgba(168, 199, 250, 0.4); z-index: 20; }
+
+        .b-txt { font-weight: bold; text-align: center; font-size: 13px; color: var(--text); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;}
+
+        .node { width: 0.1px; height: 0.1px; background: var(--bg-black); border-radius: 1%; position: absolute; border: 2px solid var(--border); }
+        .node.in { left: -6px; top: 50%; transform: translateY(-50%); }
+        .node.out { right: -1px; top: 50%; transform: translateY(-50%); width: 1px; height: 1px; border: none; background: transparent; }
+        .node.top { top: -6px; left: 50%; transform: translateX(-50%); }
+        .node.bottom { bottom: -6px; left: 50%; transform: translateX(-50%); }
 
         svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; overflow: visible;}
-        .path-line { fill: none; stroke: var(--accent); stroke-width: 2.5; opacity: 0.7; stroke-linejoin: round; pointer-events: auto; }
-        .path-line:hover { stroke: #ff4757; stroke-width: 4px; cursor: pointer; opacity: 1; }
-        .path-line.temp { stroke: #ffeb3b; stroke-dasharray: 5,5; pointer-events: none; }
+        .path-line { fill: none; stroke: var(--text); stroke-width: 1.5; opacity: 0.9; stroke-linejoin: round; }
 
         .pane-header { padding: 12px 20px; background: rgba(255,255,255,0.03); font-weight: bold; border-bottom: 1px solid var(--border); font-size: 13px; display: flex; justify-content: space-between; align-items: center;}
         .pane-content { padding: 15px 20px; overflow-y: auto; flex-grow: 1; }
@@ -46,15 +45,11 @@
         th { background: #2a2b2e; color: var(--accent); font-weight: bold; }
         .data-row:hover { background: rgba(255,255,255,0.05); }
 
-        input[type="text"] { background: var(--bg-black); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; outline: none; }
-        input[type="text"]:focus { border-color: var(--accent); }
-
+        input[type="text"] { background: var(--bg-black); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; outline: none; width: 90%;}
         .elf-header { display: grid; grid-template-columns: 3fr 1.5fr 1.5fr 80px; font-weight: bold; color: var(--accent); padding: 8px; border-bottom: 1px solid var(--border); font-size: 12px; background: #2a2b2e;}
         .elf-item { display: grid; grid-template-columns: 3fr 1.5fr 1.5fr 80px; padding: 6px 8px; border-bottom: 1px solid var(--border); align-items: center; font-family: monospace; font-size: 11px;}
         .elf-item:hover { background: rgba(255,255,255,0.05); }
         .elf-add-btn { background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 4px 8px; border-radius: 12px; cursor: pointer; font-size: 11px; font-weight: bold;}
-        .elf-add-btn:hover { background: var(--accent); color: #000; }
-        #elf-list { flex-grow: 1; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; }
 
         .context-menu { position: absolute; background: var(--panel-bg); border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: none; z-index: 1000; border-radius: var(--radius-sm); overflow: hidden; padding: 4px 0; min-width: 150px;}
         .context-menu div { padding: 8px 15px; font-size: 12px; cursor: pointer; color: var(--text);}
@@ -62,19 +57,20 @@
 
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-thumb { background: #555; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #777; }
     </style>
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
 </head>
 <body>
     <div class="status-tabbar">
         <div class="stat-group">
-            <span id="conn-status"><span class="led" id="led-conn" style="background: red;"></span><span id="text-conn">Chưa kết nối</span></span>
-            <span id="uptime-display" style="font-family: monospace; color: #a8c7fa;">UPTIME: 00:00:00</span>
+            <span id="conn-status">
+                <span class="led" id="led-conn" style="background: red;"></span>
+                <span id="text-conn" style="color: red; font-weight: bold;">Chưa kết nối</span>
+            </span>
+            <span id="uptime-display" style="font-family: monospace; color: #a8c7fa; font-weight: bold;">UPTIME: 00:00:00</span>
             <span id="mode-display" style="color: #ffeb3b; font-weight: bold;">MODE: OFFLINE</span>
         </div>
         <div class="stat-group">
-            <button class="btn" style="background: #e3e3e3; color: #000;" onclick="addNewBlock()">➕ THÊM BLOCK</button>
             <button class="btn" onclick="if(window.backend) backend.js_open_plot_window()">📊 MỞ SCOPE</button>
             <button class="btn" style="background: #6dd68f;" onclick="if(window.backend) backend.js_save_csv()">💾 LƯU CSV</button>
         </div>
@@ -84,8 +80,79 @@
         <div class="top-section">
             <div class="workspace-container" id="ws-container">
                 <div id="zoom-layer">
-                    <svg id="svg-layer"></svg>
-                    <svg id="svg-temp-layer" style="z-index: 50;"></svg>
+                    <svg id="svg-layer">
+                        <defs>
+                            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text)" />
+                            </marker>
+                        </defs>
+                    </svg>
+
+                    <div class="block" id="blk_pi_spd" style="top: 170px; left: 20px; width: 120px; height: 60px;">
+                        <div class="b-txt">PI Speed</div>
+                        <div class="node bottom" id="n_pi_spd_bot"></div>
+                        <div class="node out" id="n_pi_spd_out"></div>
+                    </div>
+
+                    <div class="block" id="blk_pi_iq" style="top: 170px; left: 180px; width: 120px; height: 60px;">
+                        <div class="b-txt">PI Iq</div>
+                        <div class="node in" id="n_iq_in" style="left: -6px; top: 50%;"></div>
+                        <div class="node out" id="n_iq_out"></div>
+                    </div>
+
+                    <div class="block" id="blk_pi_id" style="top: 260px; left: 180px; width: 120px; height: 60px;">
+                        <div class="b-txt">PI Id</div>
+                        <div class="node bottom" id="n_id_bot"></div>
+                        <div class="node out" id="n_id_out"></div>
+                    </div>
+
+                    <div class="block" id="blk_cp" style="top: 170px; left: 350px; width: 80px; height: 150px;">
+                        <div class="b-txt">CLARK<br>PARK</div>
+                        <div class="node in" id="n_cp_in_1" style="top: 20%;"></div>
+                        <div class="node in" id="n_cp_in_2" style="top: 80%;"></div>
+                        <div class="node bottom" id="n_cp_in_3"></div>
+                        <div class="node out" id="n_cp_out_1" style="top: 20%;"></div>
+                        <div class="node out" id="n_cp_out_2" style="top: 80%;"></div>
+                    </div>
+
+                    <div class="block" id="blk_svpwm" style="top: 170px; left: 480px; width: 80px; height: 150px;">
+                        <div class="b-txt">SVPWM</div>
+                        <div class="node in" id="n_sv_in_1" style="top: 20%;"></div>
+                        <div class="node in" id="n_sv_in_2" style="top: 80%;"></div>
+                        <div class="node out" id="n_sv_out_1" style="top: 20%;"></div>
+                        <div class="node out" id="n_sv_out_2" style="top: 80%;"></div>
+                    </div>
+
+                    <div class="block" id="blk_inv" style="top: 170px; left: 610px; width: 80px; height: 150px;">
+                        <div class="b-txt">INVERTER</div>
+                        <div class="node in" id="n_inv_in_1" style="top: 20%;"></div>
+                        <div class="node in" id="n_inv_in_2" style="top: 80%;"></div>
+                        <div class="node out" id="n_inv_out" style="top: 50%; right: -6px;"></div>
+                        <div class="node bottom" id="n_inv_bot"></div>
+                    </div>
+
+                    <div class="block" id="blk_pmsm" style="top: 440px; left: 610px; width: 80px; height: 80px;">
+                        <div class="b-txt">PMSM</div>
+                        <div class="node in" id="n_mot_in" style="top: 50%; right: -6px; left: auto;"></div>
+                        <div class="node out" id="n_mot_out" style="top: 50%; left: -6px; right: auto;"></div>
+                    </div>
+
+                    <div class="block" id="blk_sensor" style="top: 440px; left: 350px; width: 80px; height: 80px;">
+                        <div class="b-txt">SENSOR</div>
+                        <div class="node in" id="n_sens_in" style="top: 50%; right: -6px; left: auto;"></div>
+                        <div class="node out" id="n_sens_out_top" style="top: -6px; left: 50%;"></div>
+                        <div class="node out" id="n_sens_out_left" style="top: 50%; left: -6px; right: auto;"></div>
+                    </div>
+
+                    <div class="block" id="blk_inv_cp" style="top: 350px; left: 350px; width: 80px; height: 70px;">
+                        <div class="b-txt">INV<br>CLARK<br>PARK</div>
+                        <div class="node bottom" id="n_icp_in_bot"></div>
+                        <div class="node in" id="n_icp_in_right" style="left: auto; right: -6px;"></div>
+                        <div class="node out" id="n_icp_out_top" style="top: -6px; left: 50%;"></div>
+                        <div class="node out" id="n_icp_out_id" style="left: -6px; top: 25%; right: auto;"></div>
+                        <div class="node out" id="n_icp_out_iq" style="left: -6px; top: 75%; right: auto;"></div>
+                    </div>
+
                 </div>
             </div>
 
@@ -117,10 +184,7 @@
     </div>
 
     <div id="ctx-menu" class="context-menu">
-        <div id="ctx-save-page" onclick="savePageUI()" style="color: #6dd68f; font-weight:bold; display:none;">💾 Save Page (Lưu Layout)</div>
-        <div id="ctx-delete-var" onclick="deleteVariable()" style="display:none;">🗑️ Xóa biến khỏi Block</div>
-        <div id="ctx-delete-block" onclick="deleteBlockUI()" style="display:none; color: #ff4757;">🗑️ Xóa Block</div>
-        <div id="ctx-delete-wire" onclick="deleteWireUI()" style="display:none; color: #ff4757;">✂️ Cắt Dây Nối</div>
+        <div id="ctx-delete-var" onclick="deleteVariable()">🗑️ Xóa biến khỏi Block</div>
     </div>
 
     <script>
@@ -131,14 +195,6 @@
 
         let scale = 1, panX = 0, panY = 0;
         let isPanning = false, startPanX = 0, startPanY = 0;
-        const zoomLayer = document.getElementById('zoom-layer');
-        const wsContainer = document.getElementById('ws-container');
-
-        let connections = [];
-        let uiState = { blocks: {}, connections: [] };
-        let draggedBlock = null, offsetX = 0, offsetY = 0;
-        let isWiring = false, wireStartNode = null, wireStartBlockId = null;
-
         let plottedVars = [];
         var appState = 'offline';
         var uptimeSeconds = 0;
@@ -146,265 +202,140 @@
 
         new QWebChannel(qt.webChannelTransport, function (channel) {
             window.backend = channel.objects.backend;
-            loadUIState();
             if(window.backend) window.backend.js_request_sync();
         });
 
-        // ==========================================
-        // 1. QUẢN LÝ LƯU TRỮ VỊ TRÍ
-        // ==========================================
-        function loadUIState() {
-            const saved = localStorage.getItem('foc_ui_state');
-            if (saved) {
-                uiState = JSON.parse(saved);
-            } else {
-                uiState = { blocks: {}, connections: [] };
+        function syncConfig(data) {
+            if (typeof data === 'string') {
+                try { data = JSON.parse(data); } catch(e) { console.error("Parse JSON error", e); return; }
             }
+            blockDB = data;
+            if(activeBlock) renderPropertiesTable();
+            drawLines();
         }
 
-        // forceSaveUIState(true) -> Hiện thông báo (Dùng cho Save Page)
-        // forceSaveUIState(false) -> Lưu ngầm (Dùng khi Add/Delete block)
-        function forceSaveUIState(showAlert = false) {
-            uiState.blocks = {};
-            document.querySelectorAll('.block').forEach(b => {
-                uiState.blocks[b.id] = { title: b.querySelector('.block-title').innerText, left: b.style.left, top: b.style.top };
-            });
-            uiState.connections = connections;
-            localStorage.setItem('foc_ui_state', JSON.stringify(uiState));
-            if(showAlert) {
-                document.getElementById('ctx-menu').style.display = 'none';
-                alert("Đã lưu Layout Workspace (Vị trí Khối & Dây nối)!");
-            }
-        }
-
-        function savePageUI() {
-            forceSaveUIState(true);
-        }
-
-        function createBlockElement(id, title, left, top) {
-            if(document.getElementById(id)) return;
-            const div = document.createElement('div');
-            div.className = 'block'; div.id = id; div.style.left = left; div.style.top = top;
-            div.innerHTML = `<div class="block-title">${title}</div><div class="block-subtitle">Custom Layer</div><div class="node in"></div><div class="node out"></div>`;
-            makeBlockInteractive(div);
-            zoomLayer.appendChild(div);
-        }
-
-        function addNewBlock() {
-            const blockId = prompt("Nhập ID của Block mới (Ví dụ: blk_motor):", "blk_" + Date.now());
-            if(!blockId) return;
-            const title = prompt("Nhập Tên hiển thị (Ví dụ: Động cơ PM):", "New Block");
-            if(!title) return;
-            if(document.getElementById(blockId)) { alert("ID này đã tồn tại!"); return; }
-
-            createBlockElement(blockId, title, `${(wsContainer.clientWidth/2 - panX)/scale}px`, `${(wsContainer.clientHeight/2 - panY)/scale}px`);
-            blockDB[blockId] = [];
-            if(window.backend) window.backend.js_add_block(blockId);
-
-            // Ép lưu ngay lập tức để block không bị mất nếu quên bấm Save Page
-            forceSaveUIState(false);
-        }
-
-        // ==========================================
-        // 2. ĐỒNG BỘ TỪ PYTHON (SỰ THẬT TUYỆT ĐỐI)
-        // ==========================================
-        function syncConfig(jsonStr) {
-            const data = JSON.parse(jsonStr);
-            blockDB = {};
-
-            // BƯỚC 1: Cập nhật biến và tạo khối mới (Nếu có trong JSON)
-            for(let key in data) {
-                blockDB[key] = data[key];
-
-                if(!document.getElementById(key)) {
-                    let left = '100px', top = '100px', title = key;
-                    if(uiState.blocks && uiState.blocks[key]) {
-                        left = uiState.blocks[key].left;
-                        top = uiState.blocks[key].top;
-                        title = uiState.blocks[key].title;
-                    }
-                    createBlockElement(key, title, left, top);
-                }
-            }
-
-            // BƯỚC 2: Xóa triệt để các khối Ma (Có trên UI nhưng đã bị xóa trong JSON)
-            document.querySelectorAll('.block').forEach(b => {
-                if(!data[b.id]) {
-                    b.remove();
-                }
-            });
-
-            // BƯỚC 3: Cập nhật lại dây nối và giao diện
-            if(uiState.connections) {
-                connections = uiState.connections.filter(c => document.getElementById(c.f) && document.getElementById(c.t));
-                drawLines();
-            }
-
-            if(activeBlock && document.getElementById(activeBlock)) {
-                renderPropertiesTable();
-            } else {
-                activeBlock = null;
-                document.getElementById('prop-body').innerHTML = '<tr><td colspan="6" style="text-align:center; color:#777; padding: 20px;">Vui lòng Click vào một Block phía trên.</td></tr>';
-            }
-        }
-
-        // ==========================================
-        // 3. ZOOM, KÉO KHỐI & NỐI DÂY
-        // ==========================================
+        const wsContainer = document.getElementById('ws-container');
         wsContainer.addEventListener('wheel', e => {
-            if(e.ctrlKey) { e.preventDefault(); scale += e.deltaY * -0.001; scale = Math.min(Math.max(0.4, scale), 3); updateTransform(); }
-        });
+            e.preventDefault();
+            scale += e.deltaY * -0.001;
+            scale = Math.min(Math.max(0.4, scale), 3);
+            updateTransform();
+        }, { passive: false });
+
         wsContainer.addEventListener('mousedown', e => {
-            if(e.button === 1 || (e.button === 0 && e.altKey)) { isPanning = true; startPanX = e.clientX - panX; startPanY = e.clientY - panY; wsContainer.style.cursor = 'grabbing'; }
+            if(e.button === 1 || e.button === 0) {
+                isPanning = true; startPanX = e.clientX - panX; startPanY = e.clientY - panY;
+            }
         });
-        document.addEventListener('mousemove', e => { if(isPanning) { panX = e.clientX - startPanX; panY = e.clientY - startPanY; updateTransform(); } });
-        document.addEventListener('mouseup', () => { isPanning = false; wsContainer.style.cursor = 'default'; });
-        function updateTransform() { zoomLayer.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; }
-
-        function makeBlockInteractive(block) {
-            block.addEventListener('mousedown', e => {
-                if(e.target.classList.contains('node')) return;
-                draggedBlock = block;
-                const zr = zoomLayer.getBoundingClientRect();
-                offsetX = (e.clientX - zr.left) / scale - parseFloat(block.style.left||0);
-                offsetY = (e.clientY - zr.top) / scale - parseFloat(block.style.top||0);
-                setActiveBlock(block.id);
-            });
-            block.querySelectorAll('.node.out').forEach(node => {
-                node.addEventListener('mousedown', e => { isWiring = true; wireStartNode = node; wireStartBlockId = block.id; e.stopPropagation(); });
-            });
-            block.querySelectorAll('.node.in').forEach(node => {
-                node.addEventListener('mouseup', e => {
-                    if(isWiring && wireStartBlockId !== block.id) {
-                        if(!connections.find(c => c.f === wireStartBlockId && c.t === block.id)) {
-                            connections.push({f: wireStartBlockId, t: block.id}); drawLines();
-                        }
-                    }
-                });
-            });
-        }
-
         document.addEventListener('mousemove', e => {
-            if(draggedBlock) {
-                const zr = zoomLayer.getBoundingClientRect();
-                draggedBlock.style.left = `${(e.clientX - zr.left) / scale - offsetX}px`;
-                draggedBlock.style.top = `${(e.clientY - zr.top) / scale - offsetY}px`;
-                drawLines();
-            }
-            if(isWiring) {
-                const zr = zoomLayer.getBoundingClientRect(); const r1 = wireStartNode.getBoundingClientRect();
-                let x1 = (r1.left + r1.width/2 - zr.left)/scale; let y1 = (r1.top + r1.height/2 - zr.top)/scale;
-                let x2 = (e.clientX - zr.left)/scale; let y2 = (e.clientY - zr.top)/scale;
-                const midX = (x1 + x2) / 2;
-                document.getElementById('svg-temp-layer').innerHTML = `<path d="M ${x1},${y1} L ${midX},${y1} L ${midX},${y2} L ${x2},${y2}" class="path-line temp"></path>`;
-            }
+            if(isPanning) { panX = e.clientX - startPanX; panY = e.clientY - startPanY; updateTransform(); }
+        });
+        document.addEventListener('mouseup', () => { isPanning = false; });
+
+        function updateTransform() { document.getElementById('zoom-layer').style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; }
+
+        document.querySelectorAll('.block').forEach(block => {
+            block.addEventListener('click', e => {
+                document.querySelectorAll('.block').forEach(b => b.classList.remove('active'));
+                block.classList.add('active'); activeBlock = block.id;
+                document.getElementById('active-block-name').innerText = block.querySelector('.b-txt').innerText.replace('\n',' ');
+                renderPropertiesTable();
+            });
         });
 
-        document.addEventListener('mouseup', () => {
-            if(draggedBlock) { draggedBlock = null; }
-            if(isWiring) { isWiring = false; document.getElementById('svg-temp-layer').innerHTML = ''; }
-        });
+        function getPt(id) {
+            const el = document.getElementById(id);
+            if(!el) return {x:0,y:0};
+            const zr = document.getElementById('zoom-layer').getBoundingClientRect();
+            const r = el.getBoundingClientRect();
+            return { x: (r.left + r.width/2 - zr.left)/scale, y: (r.top + r.height/2 - zr.top)/scale };
+        }
 
         function drawLines() {
-            const svg = document.getElementById('svg-layer'); svg.innerHTML = '';
-            const zr = zoomLayer.getBoundingClientRect();
-            connections.forEach((c, idx) => {
-                const b1 = document.getElementById(c.f); const b2 = document.getElementById(c.t);
-                if(!b1 || !b2) return;
-                const n1 = b1.querySelector('.node.out') || b1; const n2 = b2.querySelector('.node.in') || b2;
-                const r1 = n1.getBoundingClientRect(); const r2 = n2.getBoundingClientRect();
-                let x1 = (r1.left + r1.width/2 - zr.left)/scale; let y1 = (r1.top + r1.height/2 - zr.top)/scale;
-                let x2 = (r2.left + r2.width/2 - zr.left)/scale; let y2 = (r2.top + r2.height/2 - zr.top)/scale;
-                const midX = (x1 + x2) / 2;
-                let d = `M ${x1},${y1} L ${midX},${y1} L ${midX},${y2} L ${x2},${y2}`;
-                svg.innerHTML += `<path d="${d}" class="path-line" data-idx="${idx}"></path>`;
-            });
+            const svg = document.getElementById('svg-layer');
+            const markerHTML = `<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text)" /></marker></defs>`;
+            let pathHTML = '';
+
+            function route(d) {
+                pathHTML += `<path d="${d}" class="path-line" marker-end="url(#arrow)"></path>`;
+            }
+
+            let p1, p2;
+
+            p1 = getPt('n_pi_spd_out'); p2 = getPt('n_iq_in');
+            route(`M ${p1.x},${p1.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_iq_out'); p2 = getPt('n_cp_in_1');
+            route(`M ${p1.x},${p1.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_id_out'); p2 = getPt('n_cp_in_2');
+            route(`M ${p1.x},${p1.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_cp_out_1'); p2 = getPt('n_sv_in_1'); route(`M ${p1.x},${p1.y} L ${p2.x},${p2.y}`);
+            p1 = getPt('n_cp_out_2'); p2 = getPt('n_sv_in_2'); route(`M ${p1.x},${p1.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_sv_out_1'); p2 = getPt('n_inv_in_1'); route(`M ${p1.x},${p1.y} L ${p2.x},${p2.y}`);
+            p1 = getPt('n_sv_out_2'); p2 = getPt('n_inv_in_2'); route(`M ${p1.x},${p1.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_inv_out'); p2 = getPt('n_mot_in');
+            route(`M ${p1.x},${p1.y} L ${p1.x+30},${p1.y} L ${p1.x+30},${p2.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_mot_out'); p2 = getPt('n_sens_in');
+            route(`M ${p1.x},${p1.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_sens_out_top'); p2 = getPt('n_icp_in_bot');
+            route(`M ${p1.x},${p1.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_icp_out_top'); p2 = getPt('n_cp_in_3');
+            route(`M ${p1.x},${p1.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_sens_out_left'); p2 = getPt('n_pi_spd_bot');
+            route(`M ${p1.x},${p1.y} L ${p2.x},${p1.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_icp_out_id'); p2 = getPt('n_id_bot');
+            route(`M ${p1.x},${p1.y} L ${p2.x},${p1.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_icp_out_iq'); p2 = getPt('n_iq_in');
+            route(`M ${p1.x},${p1.y} L ${p2.x-20},${p1.y} L ${p2.x-20},${p2.y+20} L ${p2.x},${p2.y+20}`);
+
+            p1 = getPt('n_inv_bot'); p2 = getPt('n_icp_in_right');
+            route(`M ${p1.x},${p1.y} L ${p1.x},${p2.y} L ${p2.x},${p2.y}`);
+
+            svg.innerHTML = markerHTML + pathHTML;
         }
 
-        // ==========================================
-        // 4. CHUỘT PHẢI (CONTEXT MENU ĐA NĂNG)
-        // ==========================================
-        let targetBlockId = null, targetWireIdx = -1, varToDelete = null;
-
+        let varToDelete = null;
         window.addEventListener('contextmenu', e => {
             if (e.target.closest('#prop-body')) return;
-
             e.preventDefault();
-            document.getElementById('ctx-save-page').style.display = 'none';
-            document.getElementById('ctx-delete-var').style.display = 'none';
-            document.getElementById('ctx-delete-block').style.display = 'none';
-            document.getElementById('ctx-delete-wire').style.display = 'none';
-
-            if (e.target.classList.contains('path-line')) {
-                targetWireIdx = parseInt(e.target.getAttribute('data-idx'));
-                document.getElementById('ctx-delete-wire').style.display = 'block';
-            } else {
-                const block = e.target.closest('.block');
-                if (block && !e.target.classList.contains('node')) {
-                    targetBlockId = block.id;
-                    document.getElementById('ctx-delete-block').style.display = 'block';
-                } else if (e.target.closest('#ws-container')) {
-                    document.getElementById('ctx-save-page').style.display = 'block';
-                } else {
-                    return;
-                }
-            }
-            const menu = document.getElementById('ctx-menu');
-            menu.style.display = 'block'; menu.style.left = e.pageX + 'px'; menu.style.top = e.pageY + 'px';
+            document.getElementById('ctx-menu').style.display = 'none';
         });
 
         function showContextMenu(e, type, varName=null) {
             e.preventDefault(); e.stopPropagation();
-            document.getElementById('ctx-save-page').style.display = 'none';
-            document.getElementById('ctx-delete-var').style.display = 'none';
-            document.getElementById('ctx-delete-block').style.display = 'none';
-            document.getElementById('ctx-delete-wire').style.display = 'none';
-
             if (type === 'var') { varToDelete = varName; document.getElementById('ctx-delete-var').style.display = 'block'; }
             const menu = document.getElementById('ctx-menu');
             menu.style.display = 'block'; menu.style.left = e.pageX + 'px'; menu.style.top = e.pageY + 'px';
         }
-
         window.addEventListener('click', () => { document.getElementById('ctx-menu').style.display = 'none'; });
 
-        function deleteBlockUI() {
-            if(!targetBlockId) return;
-            const el = document.getElementById(targetBlockId); if(el) el.remove();
-            connections = connections.filter(c => c.f !== targetBlockId && c.t !== targetBlockId); drawLines();
-            delete blockDB[targetBlockId];
-            if(activeBlock === targetBlockId) { activeBlock = null; renderPropertiesTable(); }
-            if(window.backend) window.backend.js_remove_block(targetBlockId);
-
-            // Ép lưu ngay lập tức để block không bị "sống lại"
-            forceSaveUIState(false);
+        // SỬA LỖI XÓA BIẾN XONG PHẢI RENDER LẠI BẢNG NGAY
+        function deleteVariable() {
+            if(!activeBlock || !varToDelete) return;
+            blockDB[activeBlock] = blockDB[activeBlock].filter(v => v.id !== varToDelete);
+            renderPropertiesTable();
+            if(backend) backend.js_remove_mapping(activeBlock, varToDelete);
         }
 
-        function deleteWireUI() { if(targetWireIdx !== -1) { connections.splice(targetWireIdx, 1); drawLines(); } }
-        function deleteVariable() { if(!activeBlock || !varToDelete) return; blockDB[activeBlock] = blockDB[activeBlock].filter(v => v.id !== varToDelete); renderPropertiesTable(); if(backend) backend.js_remove_mapping(activeBlock, varToDelete); }
-
-        document.addEventListener('keydown', e => {
-            if (e.key === 'Delete') { if (activeBlock && confirm(`Bạn có chắc muốn xóa Block [${activeBlock}]?`)) { targetBlockId = activeBlock; deleteBlockUI(); } }
-        });
-
-        // ==========================================
-        // 5. HIỂN THỊ DỮ LIỆU
-        // ==========================================
         function syncPlottedVars(varsArray) {
             plottedVars = varsArray;
-            if(activeBlock) renderPropertiesTable();
+            document.querySelectorAll('.plot-checkbox').forEach(cb => { cb.checked = plottedVars.includes(cb.getAttribute('data-varid')); });
         }
 
         function togglePlot(varId, isChecked) {
             if(isChecked && !plottedVars.includes(varId)) plottedVars.push(varId);
             else if(!isChecked) plottedVars = plottedVars.filter(id => id !== varId);
             if(window.backend) backend.js_toggle_var_to_plot(varId, isChecked);
-        }
-
-        function setActiveBlock(id) {
-            document.querySelectorAll('.block').forEach(b => b.classList.remove('active'));
-            document.getElementById(id).classList.add('active'); activeBlock = id;
-            document.getElementById('active-block-name').innerText = document.querySelector(`#${id} .block-title`).innerText;
-            renderPropertiesTable();
         }
 
         function syncElf(elfJson) { elfDataGlobal = elfJson; renderElfList(); }
@@ -419,8 +350,10 @@
         }
 
         function addVarToActiveBlock(varName, addr, type) {
-            if (!activeBlock) { alert("Vui lòng click chọn một Block bên trên!"); return; }
+            if (!activeBlock) { alert("Vui lòng chọn một Block bên trên!"); return; }
+            if (!blockDB[activeBlock]) blockDB[activeBlock] = [];
             if (blockDB[activeBlock].find(v => v.id === varName)) return;
+
             blockDB[activeBlock].push({ id: varName, addr: addr, type: type });
             if (window.backend) window.backend.js_save_mapping(activeBlock, varName, addr, type);
             renderPropertiesTable();
@@ -431,10 +364,10 @@
             vars.forEach(v => {
                 const isChecked = plottedVars.includes(v.id) ? 'checked' : '';
                 html += `<tr class="data-row" oncontextmenu="showContextMenu(event, 'var', '${v.id}')">
-                    <td style="text-align:center;"><input type="checkbox" ${isChecked} onchange="togglePlot('${v.id}', this.checked)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="plot-checkbox" data-varid="${v.id}" ${isChecked} onclick="event.stopPropagation();" onchange="togglePlot('${v.id}', this.checked); event.stopPropagation();"></td>
                     <td style="color:#fff; font-weight:bold;">${v.id}</td><td style="color:#a8c7fa;">${v.type}</td><td style="color:#888;">${v.addr}</td>
                     <td class="val-read" id="read-${v.id}">0.00</td>
-                    <td><input type="text" placeholder="Gõ số & Enter..." onkeydown="if(event.key === 'Enter') writeDataToMCU('${v.addr}', this.value, this, '${v.type}')" style="width: 90%;"></td>
+                    <td><input type="text" placeholder="Gõ số & Enter..." onclick="event.stopPropagation();" onkeydown="if(event.key === 'Enter') writeDataToMCU('${v.addr}', this.value, this, '${v.type}')"></td>
                 </tr>`;
             });
             document.getElementById('prop-body').innerHTML = html || '<tr><td colspan="6" style="text-align:center; padding: 20px; color:#777">Chưa gán biến. Hãy chọn từ ELF Explorer ở trên.</td></tr>';
@@ -446,16 +379,68 @@
         }
 
         function setAppMode(mode) {
+            const modeEl = document.getElementById('mode-display');
+            const ledConn = document.getElementById('led-conn');
+            const textConn = document.getElementById('text-conn');
+            const uptimeEl = document.getElementById('uptime-display');
+
+            if (!modeEl || !ledConn || !textConn) return;
+
             appState = mode;
-            if(mode === 'realtime') {
-                document.getElementById('mode-display').innerText = "MODE: REAL-TIME";
-                document.getElementById('led-conn').style.background = "#00ff00"; document.getElementById('text-conn').innerText = "Đã kết nối MCU";
-                if(!uptimeInterval) {
-                    uptimeInterval = setInterval(() => { uptimeSeconds++; const h = Math.floor(uptimeSeconds/3600).toString().padStart(2, '0'); const m = Math.floor((uptimeSeconds%3600)/60).toString().padStart(2, '0'); const s = (uptimeSeconds%60).toString().padStart(2, '0'); document.getElementById('uptime-display').innerText = `UPTIME: ${h}:${m}:${s}`; }, 1000);
+
+            if (mode === 'realtime') {
+                modeEl.innerText = "MODE: REAL-TIME";
+                modeEl.style.color = "#00ff00";
+                ledConn.style.background = "#00ff00";
+                textConn.innerText = "Đã kết nối MCU";
+                textConn.style.color = "#00ff00";
+
+                if (!uptimeInterval) {
+                    uptimeInterval = setInterval(() => {
+                        uptimeSeconds++;
+                        const h = Math.floor(uptimeSeconds / 3600).toString().padStart(2, '0');
+                        const m = Math.floor((uptimeSeconds % 3600) / 60).toString().padStart(2, '0');
+                        const s = (uptimeSeconds % 60).toString().padStart(2, '0');
+                        if (uptimeEl) uptimeEl.innerText = `UPTIME: ${h}:${m}:${s}`;
+                    }, 1000);
                 }
+            } else if (mode === 'review') {
+                modeEl.innerText = "MODE: REVIEW (CSV)";
+                modeEl.style.color = "#00e5ff";
+                ledConn.style.background = "#00e5ff";
+                textConn.innerText = "Đọc File Offline";
+                textConn.style.color = "#00e5ff";
+                if (uptimeInterval) {
+                    clearInterval(uptimeInterval);
+                    uptimeInterval = null;
+                }
+            } else if (mode === 'paused') {
+                modeEl.innerText = "MODE: PAUSED";
+                modeEl.style.color = "#ffeb3b";
+                ledConn.style.background = "#ffeb3b";
+                textConn.innerText = "Tạm dừng Plot";
+                textConn.style.color = "#ffeb3b";
+            } else {
+                modeEl.innerText = "MODE: OFFLINE";
+                modeEl.style.color = "#ffeb3b";
+                ledConn.style.background = "red";
+                textConn.innerText = "Chưa kết nối";
+                textConn.style.color = "red";
+                if (uptimeInterval) {
+                    clearInterval(uptimeInterval);
+                    uptimeInterval = null;
+                }
+                uptimeSeconds = 0;
+                if (uptimeEl) uptimeEl.innerText = `UPTIME: 00:00:00`;
             }
         }
-        function updateRealtimeData(data) { if (appState === 'offline') setAppMode('realtime'); }
+
+        function updateRealtimeData(data) {
+            if (appState === 'offline') {
+                setAppMode('realtime');
+            }
+        }
+
         function updateReadDataFromPython(dataJson) {
             const data = JSON.parse(dataJson);
             for (const [varName, value] of Object.entries(data)) { const el = document.getElementById(`read-${varName}`); if (el) el.innerText = value.toFixed(4); }
@@ -463,13 +448,13 @@
 
         const resizerV = document.getElementById('resizer-v'); const resizerH = document.getElementById('resizer-h');
         let isResizingV = false, isResizingH = false;
-        resizerV.addEventListener('mousedown', () => { isResizingV = true; document.body.style.cursor = 'col-resize'; });
-        resizerH.addEventListener('mousedown', () => { isResizingH = true; document.body.style.cursor = 'row-resize'; });
+        resizerV.addEventListener('mousedown', () => { isResizingV = true; });
+        resizerH.addEventListener('mousedown', () => { isResizingH = true; });
         document.addEventListener('mousemove', (e) => {
             if (isResizingV) { const rightW = document.body.clientWidth - e.clientX - 3; if(rightW > 300 && rightW < 800) { document.getElementById('right-panel').style.width = `${rightW}px`; document.getElementById('ws-container').style.width = `calc(100% - ${rightW}px - 6px)`; } }
             if (isResizingH) { const bottomH = document.querySelector('.main-wrapper').clientHeight - e.clientY + 48; if(bottomH > 150 && bottomH < 600) { document.getElementById('bottom-panel').style.height = `${bottomH}px`; document.querySelector('.top-section').style.height = `calc(100% - ${bottomH}px - 6px)`; } }
         });
-        document.addEventListener('mouseup', () => { isResizingV = false; isResizingH = false; document.body.style.cursor = 'default'; drawLines(); });
+        document.addEventListener('mouseup', () => { isResizingV = false; isResizingH = false; drawLines(); });
 
         window.addEventListener('resize', drawLines); setTimeout(drawLines, 200);
     </script>

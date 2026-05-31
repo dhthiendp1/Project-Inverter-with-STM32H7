@@ -11,7 +11,7 @@
 
 using json = nlohmann::json;
 
-// --- HÀM TỰ ĐỘNG ĐỌC CẤU HÌNH BIẾN ---
+// TỰ ĐỘNG ĐỌC CẤU HÌNH BIẾN 
 void loadConfiguration(const std::string& path, std::vector<FOC::VariableConfig>& active_vars) {
     std::ifstream f(path);
     if (f.is_open()) {
