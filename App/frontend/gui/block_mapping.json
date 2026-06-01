@@ -25,6 +25,11 @@
             "id": "wave_sine",
             "addr": "0x2400007c",
             "type": "float32"
+        },
+        {
+            "id": "wave_square",
+            "addr": "0x24000084",
+            "type": "float32"
         }
     ],
     "blk_inv_cp": []

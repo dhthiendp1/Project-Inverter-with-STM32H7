@@ -19,7 +19,7 @@ from controllers.web_bridge import WebBridge
 class MainApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("STM32 SCOPE - DAQ HỆ THỐNG ĐIỀU KHIỂN ĐỘNG CƠ")
+        self.setWindowTitle("STM32 SCOPE")
         self.resize(1400, 850)
 
         # Cấu hình đường dẫn tối ưu cho PyInstaller

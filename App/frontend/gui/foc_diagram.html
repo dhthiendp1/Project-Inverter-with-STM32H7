@@ -71,9 +71,9 @@
             <span id="mode-display" style="color: #ffeb3b; font-weight: bold;">MODE: OFFLINE</span>
         </div>
         <div class="stat-group">
-            <button id="btn-connect" class="btn" style="background: #28a745; color: white;" onclick="if(window.backend) backend.js_toggle_backend()">🔌 CONNECT C++</button>
-            <button class="btn" style="background: var(--accent);" onclick="if(window.backend) backend.js_open_plot_window()">📊 MỞ SCOPE</button>
-            <button class="btn" style="background: #6dd68f;" onclick="if(window.backend) backend.js_save_csv()">💾 LƯU CSV</button>
+            <button id="btn-connect" class="btn" style="background: #28a745; color: white;" onclick="if(window.backend) backend.js_toggle_backend()">🔌 CONNECT</button>
+            <button class="btn" style="background: var(--accent);" onclick="if(window.backend) backend.js_open_plot_window()">📊SCOPE</button>
+            <button class="btn" style="background: #6dd68f;" onclick="if(window.backend) backend.js_save_csv()">💾 SAVE CSV</button>
         </div>
     </div>
 
@@ -146,7 +146,7 @@
                     </div>
 
                     <div class="block" id="blk_inv_cp" style="top: 350px; left: 350px; width: 80px; height: 70px;">
-                        <div class="b-txt">INV<br>CLARK<br>PARK</div>
+                        <div class="b-txt">INV<br>CLARK PARK</div>
                         <div class="node bottom" id="n_icp_in_bot"></div>
                         <div class="node in" id="n_icp_in_right" style="left: auto; right: -6px;"></div>
                         <div class="node out" id="n_icp_out_top" style="top: -6px; left: 50%;"></div>
@@ -160,7 +160,7 @@
             <div class="resizer-v" id="resizer-v"></div>
 
             <div class="right-panel" id="right-panel">
-                <div class="pane-header"><span>🗂️ ELF EXPLORER</span><button class="btn" style="width: auto; padding: 4px 10px; margin:0;" onclick="if(window.backend) backend.js_load_elf()">📂 NẠP ELF</button></div>
+                <div class="pane-header"><span>🗂️ ELF EXPLORER</span><button class="btn" style="width: auto; padding: 4px 10px; margin:0;" onclick="if(window.backend) backend.js_load_elf()">📂 LOAD ELF</button></div>
                 <div class="pane-content" style="display: flex; flex-direction: column;">
                     <input type="text" class="search-box" id="elf-search" placeholder="🔍 Tìm tên biến..." style="width:100%; margin-bottom:10px;" onkeyup="filterElfList()">
                     <div class="elf-header"><span>Variable Name</span><span>Type</span><span>Address</span><span>Action</span></div>
