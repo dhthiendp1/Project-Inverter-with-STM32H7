@@ -1,16 +1,17 @@
 import os
+import sys
 import json
 import time
 import tempfile
 import numpy as np
 import zmq
+import subprocess
 from PyQt6.QtWidgets import QMainWindow
 from PyQt6.QtCore import QUrl, QTimer
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
 from PyQt6.QtWebChannel import QWebChannel
 
-import config_manager
 from views.plot_window import PlotWindow
 from controllers.web_bridge import WebBridge
 
@@ -18,21 +19,28 @@ from controllers.web_bridge import WebBridge
 class MainApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("SCOPE")
+        self.setWindowTitle("STM32 SCOPE - DAQ HỆ THỐNG ĐIỀU KHIỂN ĐỘNG CƠ")
         self.resize(1400, 850)
 
+        # Cấu hình đường dẫn tối ưu cho PyInstaller
+        if getattr(sys, 'frozen', False):
+            self.base_dir = sys._MEIPASS
+            self.data_dir = os.path.dirname(sys.executable)
+        else:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            self.base_dir = os.path.dirname(current_dir)
+            self.data_dir = self.base_dir
+
+        self.backend_process = None
         self.plot_win = PlotWindow()
         self.plot_win.main_app = self
         self.app_state = 'offline'
-        self.mapping_data = config_manager.load_mapping()
+        self.mapping_data = {}
 
         self.web = QWebEngineView()
         self.profile = QWebEngineProfile("foc_profile", self.web)
 
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        parent_dir = os.path.dirname(current_dir)
-        storage_path = os.path.join(parent_dir, "web_storage")
-
+        storage_path = os.path.join(self.data_dir, "web_storage")
         self.profile.setPersistentStoragePath(storage_path)
         self.profile.setPersistentCookiesPolicy(QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies)
 
@@ -45,7 +53,7 @@ class MainApp(QMainWindow):
         self.channel.registerObject("backend", self.bridge)
         self.web.page().setWebChannel(self.channel)
 
-        html_path = os.path.join(parent_dir, "foc_diagram.html")
+        html_path = os.path.join(self.base_dir, "foc_diagram.html")
         self.web.setUrl(QUrl.fromLocalFile(html_path))
 
         self.setCentralWidget(self.web)
@@ -54,10 +62,9 @@ class MainApp(QMainWindow):
         self.x_history = []
         self.y_history = {}
 
-        # LOGIC CHECK NGẮT KẾT NỐI VÀ FILE ẢO LƯU CSV
         self.last_recv_time = time.time()
         self.temp_log_path = os.path.join(tempfile.gettempdir(), "foc_daq_temp.jsonl")
-        open(self.temp_log_path, 'w').close()  # Xóa data phiên trước
+        open(self.temp_log_path, 'w').close()
 
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.SUB)
@@ -83,17 +90,15 @@ class MainApp(QMainWindow):
                 payload = self.socket.recv_json(flags=zmq.NOBLOCK)
                 latest_payload = payload
                 has_new_data = True
-                self.last_recv_time = time.time()  # Reset đồng hồ đo timeout
+                self.last_recv_time = time.time()
 
                 t = float(payload['timestamp'])
                 data_dict = payload['data']
 
-                # LƯU FILE ẢO JSON LINE (TỐN ÍT BỘ NHỚ RAM NHẤT) ĐỂ XUẤT CSV SAU
                 with open(self.temp_log_path, 'a') as f:
                     json.dump({"t": t, "d": data_dict}, f)
                     f.write('\n')
 
-                # HIỂN THỊ CHOPPING ĐỂ KHÔNG TRÀN RAM GIAO DIỆN
                 self.x_history.append(t)
                 if len(self.x_history) > self.max_points:
                     self.x_history.pop(0)
@@ -107,7 +112,7 @@ class MainApp(QMainWindow):
 
             except zmq.Again:
                 break
-            except Exception as e:
+            except Exception:
                 break
 
         if has_new_data and latest_payload:
@@ -132,7 +137,14 @@ class MainApp(QMainWindow):
             json_str = json.dumps(data_dict)
             self.web.page().runJavaScript(f"updateReadDataFromPython('{json_str}')")
 
-        # CHECK TIMEOUT
         if self.app_state == 'realtime' and (time.time() - self.last_recv_time > 1.5):
             self.app_state = 'offline'
             self.web.page().runJavaScript("if(typeof setAppMode === 'function') setAppMode('offline');")
+
+    def closeEvent(self, event):
+        if self.backend_process:
+            try:
+                self.backend_process.terminate()
+            except Exception:
+                pass
+        super().closeEvent(event)

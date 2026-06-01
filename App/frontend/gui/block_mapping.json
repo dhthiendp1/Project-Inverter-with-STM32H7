@@ -6,18 +6,7 @@
     "blk_spd_ctrl": [],
     "blk_pi": [],
     "blk_invpark": [],
-    "blk_svpwm": [
-        {
-            "id": "wave_triangle",
-            "addr": "0x24000080",
-            "type": "float32"
-        },
-        {
-            "id": "wave_sine",
-            "addr": "0x2400007c",
-            "type": "float32"
-        }
-    ],
+    "blk_svpwm": [],
     "blk_output": [],
     "blk_pi_id": [],
     "blk_pi_iq": [],
@@ -31,6 +20,11 @@
             "id": "start_stop",
             "addr": "0x2400008c",
             "type": "uint8"
+        },
+        {
+            "id": "wave_sine",
+            "addr": "0x2400007c",
+            "type": "float32"
         }
     ],
     "blk_inv_cp": []

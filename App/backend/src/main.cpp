@@ -15,7 +15,7 @@ using json = nlohmann::json;
 void loadConfiguration(const std::string& path, std::vector<FOC::VariableConfig>& active_vars) {
     std::ifstream f(path);
     if (f.is_open()) {
-        active_vars.clear(); // Xóa sạch danh sách biến cũ trong RAM C++
+        active_vars.clear();
         json data = json::parse(f);
         for (auto& [block, vars] : data.items()) {
             for (auto& v : vars) {
@@ -55,7 +55,7 @@ int main() {
     zmq::socket_t cmd_sub(cmd_ctx, zmq::socket_type::sub);
     cmd_sub.connect("tcp://127.0.0.1:5557");
     cmd_sub.set(zmq::sockopt::subscribe, "WRITE");
-    cmd_sub.set(zmq::sockopt::subscribe, "RELOAD"); // Đăng ký nhận thêm tín hiệu làm tươi bộ nhớ
+    cmd_sub.set(zmq::sockopt::subscribe, "RELOAD");
 
     auto start_time = std::chrono::high_resolution_clock::now();
 

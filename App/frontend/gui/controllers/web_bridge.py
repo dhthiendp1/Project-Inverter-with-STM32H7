@@ -1,10 +1,10 @@
 import json
 import os
 import zmq
+import subprocess
 from PyQt6.QtCore import QObject, pyqtSlot
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
-import config_manager
 from utils.elf_parser import ElfParser
 
 
@@ -14,9 +14,7 @@ class WebBridge(QObject):
         self.main_app = main_app
 
     def _get_json_path(self):
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        parent_dir = os.path.dirname(current_dir)
-        return os.path.join(parent_dir, "block_mapping.json")
+        return os.path.join(self.main_app.data_dir, "block_mapping.json")
 
     def _save_json(self):
         json_path = self._get_json_path()
@@ -38,14 +36,38 @@ class WebBridge(QObject):
             self._save_json()
 
     @pyqtSlot()
+    def js_toggle_backend(self):
+        if self.main_app.backend_process is None:
+            exe_path = os.path.join(self.main_app.base_dir, "backend_bin", "FOC_Backend_STM32.exe")
+            if not os.path.exists(exe_path):
+                QMessageBox.critical(self.main_app, "Lỗi",
+                                     f"Không tìm thấy file:\n{exe_path}\n\nVui lòng copy FOC_Backend_STM32.exe vào thư mục backend_bin")
+                return
+            try:
+                self.main_app.backend_process = subprocess.Popen([exe_path])
+                self.main_app.web.page().runJavaScript("updateConnectBtn(true);")
+            except Exception as e:
+                QMessageBox.critical(self.main_app, "Lỗi", f"Không thể chạy file: {e}")
+        else:
+            try:
+                self.main_app.backend_process.terminate()
+                self.main_app.backend_process.wait(timeout=2)
+            except Exception:
+                self.main_app.backend_process.kill()
+            self.main_app.backend_process = None
+            self.main_app.web.page().runJavaScript("updateConnectBtn(false);")
+
+    @pyqtSlot()
     def js_request_sync(self):
         json_path = self._get_json_path()
         try:
             if os.path.exists(json_path):
                 with open(json_path, 'r', encoding='utf-8') as f:
                     self.main_app.mapping_data = json.load(f)
-        except Exception as e:
-            pass
+            else:
+                self.main_app.mapping_data = {}
+        except Exception:
+            self.main_app.mapping_data = {}
 
         self._ensure_default_blocks()
         json_str = json.dumps(self.main_app.mapping_data, ensure_ascii=False)
@@ -62,7 +84,13 @@ class WebBridge(QObject):
                 QMessageBox.warning(self.main_app, "Lỗi", "Không tìm thấy biến toàn cục nào trong file ELF này.")
                 return
 
-            self.main_app.mapping_data = config_manager.sync_addresses_with_elf(self.main_app.mapping_data, elf_symbols)
+            for block, vars_list in self.main_app.mapping_data.items():
+                for v in vars_list:
+                    var_name = v['id']
+                    if var_name in elf_symbols:
+                        v['addr'] = elf_symbols[var_name]['addr']
+                        v['type'] = elf_symbols[var_name]['type']
+
             self._save_json()
             elf_json = json.dumps(elf_symbols, ensure_ascii=False)
             self.main_app.web.page().runJavaScript(f"syncElf({elf_json});")
@@ -72,8 +100,16 @@ class WebBridge(QObject):
 
     @pyqtSlot(str, str, str, str)
     def js_save_mapping(self, block, var_name, var_addr, var_type):
-        self.main_app.mapping_data = config_manager.add_var_to_block(self.main_app.mapping_data, block, var_name,
-                                                                     var_addr, var_type)
+        if block not in self.main_app.mapping_data:
+            self.main_app.mapping_data[block] = []
+        exists = False
+        for v in self.main_app.mapping_data[block]:
+            if v['id'] == var_name:
+                exists = True
+                break
+        if not exists:
+            self.main_app.mapping_data[block].append({"id": var_name, "addr": var_addr, "type": var_type})
+
         self._save_json()
         try:
             self.main_app.cmd_socket.send_string("RELOAD")
@@ -82,7 +118,8 @@ class WebBridge(QObject):
 
     @pyqtSlot(str, str)
     def js_remove_mapping(self, block, var_name):
-        self.main_app.mapping_data = config_manager.remove_var_from_block(self.main_app.mapping_data, block, var_name)
+        if block in self.main_app.mapping_data:
+            self.main_app.mapping_data[block] = [v for v in self.main_app.mapping_data[block] if v['id'] != var_name]
         self._save_json()
 
         is_still_exist = False
@@ -104,6 +141,14 @@ class WebBridge(QObject):
     @pyqtSlot(str, bool)
     def js_toggle_var_to_plot(self, var_name, is_checked):
         self.main_app.plot_win.update_available_vars(var_name, is_checked)
+        # Đồng bộ lại danh sách đã xác nhận từ plot_win về JS
+        # Tránh JS lệch trạng thái nếu plot_win từ chối hoặc giới hạn số kênh
+        try:
+            current_vars = list(self.main_app.plot_win.get_plotted_vars())
+            vars_json = json.dumps(current_vars)
+            self.main_app.web.page().runJavaScript(f"syncPlottedVars({vars_json});")
+        except Exception:
+            pass
 
     @pyqtSlot()
     def js_open_plot_window(self):
@@ -122,7 +167,6 @@ class WebBridge(QObject):
         if not file_path: return
         try:
             import csv
-            # ĐỌC TỪ FILE ẢO ĐỂ KHÔNG GIỚI HẠN THỜI GIAN VÀ KHÔNG TRÀN RAM
             temp_path = getattr(self.main_app, "temp_log_path", None)
             if not temp_path or not os.path.exists(temp_path) or os.path.getsize(temp_path) == 0:
                 QMessageBox.warning(self.main_app, "Trống", "Không có dữ liệu nào được ghi nhận để lưu!")
@@ -150,7 +194,7 @@ class WebBridge(QObject):
                         writer.writerow(row)
                         row_count += 1
 
-            QMessageBox.information(self.main_app, "Thành công", f"Đã xuất thành công {row_count} dòng dữ liệu vô hạn!")
+            QMessageBox.information(self.main_app, "Thành công", f"Đã xuất thành công {row_count} dòng dữ liệu!")
         except Exception as e:
             QMessageBox.critical(self.main_app, "Lỗi", f"Không thể lưu file CSV: {e}")
 
