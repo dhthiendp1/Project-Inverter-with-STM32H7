@@ -1,14 +1,25 @@
 {
-    "SENSORS": [
+    "blk_input": [],
+    "blk_clarke": [],
+    "blk_park": [],
+    "blk_est": [],
+    "blk_spd_ctrl": [],
+    "blk_pi": [],
+    "blk_invpark": [],
+    "blk_svpwm": [],
+    "blk_output": [],
+    "blk_pi_id": [],
+    "blk_pi_iq": [],
+    "blk_motor": [],
+    "blk_pi_spd": [],
+    "blk_cp": [],
+    "blk_inv": [],
+    "blk_pmsm": [],
+    "blk_sensor": [
         {
             "id": "start_stop",
             "addr": "0x2400008c",
             "type": "uint8"
-        },
-        {
-            "id": "wave_sine",
-            "addr": "0x2400007c",
-            "type": "float32"
         },
         {
             "id": "wave_triangle",
@@ -16,5 +27,5 @@
             "type": "float32"
         }
     ],
-    "CLARKE": []
+    "blk_inv_cp": []
 }

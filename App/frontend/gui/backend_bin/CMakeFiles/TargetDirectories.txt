@@ -1,0 +1,3 @@
+C:/Users/huy20/OneDrive/Documents/Project-Inverter-with-STM32H7/App/backend/out/build/x64-Release/CMakeFiles/FOC_Backend_STM32.dir
+C:/Users/huy20/OneDrive/Documents/Project-Inverter-with-STM32H7/App/backend/out/build/x64-Release/CMakeFiles/edit_cache.dir
+C:/Users/huy20/OneDrive/Documents/Project-Inverter-with-STM32H7/App/backend/out/build/x64-Release/CMakeFiles/rebuild_cache.dir

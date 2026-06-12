@@ -11,11 +11,11 @@
 
 using json = nlohmann::json;
 
-// --- HÀM TỰ ĐỘNG ĐỌC CẤU HÌNH BIẾN ---
+// TỰ ĐỘNG ĐỌC CẤU HÌNH BIẾN 
 void loadConfiguration(const std::string& path, std::vector<FOC::VariableConfig>& active_vars) {
     std::ifstream f(path);
     if (f.is_open()) {
-        active_vars.clear(); // Xóa sạch danh sách biến cũ trong RAM C++
+        active_vars.clear();
         json data = json::parse(f);
         for (auto& [block, vars] : data.items()) {
             for (auto& v : vars) {
@@ -33,7 +33,7 @@ void loadConfiguration(const std::string& path, std::vector<FOC::VariableConfig>
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     std::cout << "=== FOC SYSTEM BACKEND (ST-LINK & ZMQ) ===" << std::endl;
 
     FOC::StlinkReader reader;
@@ -47,7 +47,14 @@ int main() {
     std::vector<FOC::VariableConfig> active_vars;
 
     std::string config_path = FRONTEND_JSON_PATH;
-
+    if (argc > 1) {
+        config_path = argv[1];
+        std::cout << "[Backend] Nhan duong dan JSON thuc te: " << config_path << std::endl;
+    }
+    else {
+        config_path = FRONTEND_JSON_PATH;
+        std::cout << "[Backend] Khong co tham so, dung duong dan mac dinh: " << config_path << std::endl;
+    }
     // Nạp cấu hình lần đầu lúc khởi động
     loadConfiguration(config_path, active_vars);
     // Kênh nhận lệnh từ Python (Cổng 5557)
@@ -55,7 +62,7 @@ int main() {
     zmq::socket_t cmd_sub(cmd_ctx, zmq::socket_type::sub);
     cmd_sub.connect("tcp://127.0.0.1:5557");
     cmd_sub.set(zmq::sockopt::subscribe, "WRITE");
-    cmd_sub.set(zmq::sockopt::subscribe, "RELOAD"); // Đăng ký nhận thêm tín hiệu làm tươi bộ nhớ
+    cmd_sub.set(zmq::sockopt::subscribe, "RELOAD");
 
     auto start_time = std::chrono::high_resolution_clock::now();
 
@@ -101,7 +108,7 @@ int main() {
         }
 
         pub.sendData(frame);
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
     return 0;
 }

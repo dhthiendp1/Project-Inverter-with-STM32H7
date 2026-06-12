@@ -3,305 +3,556 @@
 <head>
     <meta charset="UTF-8">
     <style>
-        :root {color-scheme: dark; --bg-black: #121212; --panel-bg: #1e1e1e; --accent: #007acc; --border: #333; --text: #d4d4d4; }
-        body { margin: 0; padding: 0; background: var(--bg-black); color: var(--text); font-family: 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
+        :root {
+            color-scheme: dark;
+            --bg-black: #131314;
+            --panel-bg: #1e1f20;
+            --accent: #a8c7fa;
+            --border: #444746;
+            --text: #e3e3e3;
+            --text-muted: #c4c7c5;
+            --radius-lg: 12px;
+            --radius-sm: 6px;
+            --workspace-bg: #050505;
+            --table-header-bg: #2a2b2e;
+            --btn-text: #131314;
+            --line-stroke: #e3e3e3;
+            --hover-bg: rgba(255, 255, 255, 0.05);
+        }
+        :root[data-theme="light"] {
+            color-scheme: light;
+            --bg-black: #f0f4f9;
+            --panel-bg: #ffffff;
+            --accent: #0b57d0;
+            --border: #c4c7c5;
+            --text: #1f1f1f;
+            --text-muted: #474747;
+            --workspace-bg: #f8f9fa;
+            --table-header-bg: #e0e2ec;
+            --btn-text: #ffffff;
+            --line-stroke: #1f1f1f;
+            --hover-bg: rgba(0, 0, 0, 0.04);
+        }
+        body { margin: 0; padding: 0; background: var(--bg-black); color: var(--text); font-family: 'Google Sans', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-        .status-tabbar { height: 40px; background: #252526; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-bottom: 1px solid var(--border); font-size: 12px; flex-shrink: 0;}
+        .status-tabbar { height: 48px; background: var(--bg-black); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid var(--border); z-index: 1000;}
         .stat-group { display: flex; gap: 20px; align-items: center;}
-        .led { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .led { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; box-shadow: 0 0 5px currentColor; transition: 0.3s;}
+        .btn { background: var(--accent); color: var(--btn-text); border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 600; transition: 0.2s;}
+        .plot-checkbox {width: 18px;height: 18px;cursor: pointer;vertical-align: middle;}
+        .main-wrapper { display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; }
+        .top-section { display: flex; flex-grow: 1; overflow: hidden; height: 60%; }
 
-        .workspace { position: relative; flex-grow: 1; overflow: hidden; background: var(--bg-black); --x-top: 60%; --x-bot: 60%; --y-left: 55%; --y-right: 55%; }
-        .pane { position: absolute; background: var(--panel-bg); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border); border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);}
+        .workspace-container { flex-grow: 1; position: relative; overflow: hidden; background: var(--workspace-bg); width: 60%; cursor: grab;}
+        .workspace-container:active { cursor: grabbing; }
+        .resizer-v { width: 6px; background: var(--panel-bg); border-left: 1px solid var(--border); border-right: 1px solid var(--border); cursor: col-resize; z-index: 100;}
+        .right-panel { width: 40%; background: var(--panel-bg); display: flex; flex-direction: column; z-index: 30; overflow: hidden; }
+        .resizer-h { height: 6px; background: var(--panel-bg); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); cursor: row-resize; z-index: 100;}
+        .bottom-panel { height: 40%; background: var(--panel-bg); display: flex; flex-direction: column; z-index: 30; overflow: hidden; }
 
-        .pane-tl { top: 5px; bottom: calc(100% - var(--y-left) + 3px); left: 5px; right: calc(100% - var(--x-top) + 3px); }
-        .pane-tr { top: 5px; bottom: calc(100% - var(--y-right) + 3px); left: calc(var(--x-top) + 3px); right: 5px; }
-        .pane-bl { top: calc(var(--y-left) + 3px); bottom: 5px; left: 5px; right: calc(100% - var(--x-bot) + 3px); }
-        .pane-br { top: calc(var(--y-right) + 3px); bottom: 5px; left: calc(var(--x-bot) + 3px); right: 5px; }
+        #zoom-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform-origin: 0 0; }
 
-        .resizer { position: absolute; background: transparent; z-index: 100; transition: background 0.2s;}
-        .resizer:hover, .resizer:active { background: var(--accent); }
-        .v-resizer { width: 6px; cursor: col-resize; transform: translateX(-3px); }
-        .h-resizer { height: 6px; cursor: row-resize; transform: translateY(-3px); }
-        #v-resizer-top { top: 0; height: var(--y-left); left: var(--x-top); }
-        #v-resizer-bot { bottom: 0; height: calc(100% - var(--y-left)); left: var(--x-bot); }
-        #h-resizer-left { left: 0; width: var(--x-top); top: var(--y-left); }
-        #h-resizer-right { right: 0; width: calc(100% - var(--x-top)); top: var(--y-right); }
+        .block { position: absolute; background: var(--panel-bg); border: 2px solid var(--border); border-radius: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10; cursor: pointer; user-select: none; box-sizing: border-box;}        .block.active { border-color: var(--accent); box-shadow: 0 0 15px rgba(168, 199, 250, 0.4); z-index: 20; }
 
-        .pane-header { font-size: 11px; font-weight: bold; color: var(--accent); padding: 10px; border-bottom: 1px solid var(--border); background: #252526; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center;}
-        .pane-content { flex: 1; padding: 10px; overflow: auto; display: flex; flex-direction: column;}
-        .pane-diagram { position: relative; background: #151515; overflow: hidden; cursor: grab; flex: 1;}
-        .pane-diagram:active { cursor: grabbing; }
+        .b-txt { font-weight: bold; text-align: center; font-size: 13px; color: var(--text); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;}
 
-        #diagram-canvas { position: absolute; top: 0; left: 0; width: 3000px; height: 2000px; background-image: radial-gradient(#333 1px, transparent 1px); background-size: 25px 25px; transform-origin: 0 0; }
+        .node { width: 0.1px; height: 0.1px; background: var(--bg-black); border-radius: 1%; position: absolute; border: 2px solid var(--border); }
+        .node.in { left: -6px; top: 50%; transform: translateY(-50%); }
+        .node.out { right: -1px; top: 50%; transform: translateY(-50%); width: 1px; height: 1px; border: none; background: transparent; }
+        .node.top { top: -6px; left: 50%; transform: translateX(-50%); }
+        .node.bottom { bottom: -6px; left: 50%; transform: translateX(-50%); }
 
-        /* BẢNG DỮ LIỆU & RESIZE CỘT */
-        .table-container { flex: 1; overflow: auto; border: 1px solid #444; background: #111; }
-        table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; }
-        th { text-align: left; background: #2d2d2d; padding: 6px; color: #aaa; border: 1px solid #444; position: sticky; top: 0; z-index: 10;}
-        td { padding: 4px 6px; border: 1px solid #333; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-        tr.data-row:hover { background: #2a2a2a; }
-        .val-read { color: #4ec9b0; font-family: monospace; font-weight: bold; }
+        svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; overflow: visible;}
+        .path-line { fill: none; stroke: var(--line-stroke); stroke-width: 1.5; opacity: 0.9; stroke-linejoin: round; }
+        .pane-header { padding: 12px 20px; background: rgba(255,255,255,0.03); font-weight: bold; border-bottom: 1px solid var(--border); font-size: 13px; display: flex; justify-content: space-between; align-items: center;}
+        .pane-content { padding: 15px 20px; overflow-y: auto; flex-grow: 1; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; background: var(--bg-black); }
+        th, td { border: 1px solid var(--border); padding: 8px; text-align: left; }
+        th { background: var(--table-header-bg); color: var(--accent); font-weight: bold; }
+        .data-row:hover { background: var(--hover-bg);}
 
-        /* Chỉnh sửa bộ kéo giãn cột cho dễ click hơn */
-        .col-resizer { position: absolute; top: 0; right: -4px; width: 8px; cursor: col-resize; user-select: none; height: 100%; z-index: 20; }
-        .col-resizer:hover { background: rgba(0, 122, 204, 0.5); }
+        input[type="text"] { background: var(--bg-black); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; outline: none; width: 90%;}
+        .elf-header { display: grid; grid-template-columns: 3fr 1.5fr 1.5fr 80px; font-weight: bold; color: var(--accent); padding: 8px; border-bottom: 1px solid var(--border); font-size: 12px; background: var(--table-header-bg);}        .elf-item { display: grid; grid-template-columns: 3fr 1.5fr 1.5fr 80px; padding: 6px 8px; border-bottom: 1px solid var(--border); align-items: center; font-family: monospace; font-size: 11px;}
+        .elf-item:hover { background: var(--hover-bg); }
+        .elf-add-btn { background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 4px 8px; border-radius: 12px; cursor: pointer; font-size: 11px; font-weight: bold;}
 
-        .btn { background: var(--accent); border: none; color: white; padding: 8px; cursor: pointer; font-weight: bold; border-radius: 3px; }
-        .btn:hover { filter: brightness(1.2); }
-        .btn-add { background: #9b59b6; padding: 2px 6px; border: none; color: white; cursor: pointer; border-radius: 2px; font-weight: bold; font-size: 10px;}
+        .context-menu { position: absolute; background: var(--panel-bg); border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: none; z-index: 1000; border-radius: var(--radius-sm); overflow: hidden; padding: 4px 0; min-width: 150px;}
+        .context-menu div { padding: 8px 15px; font-size: 12px; cursor: pointer; color: var(--text);}
+        .context-menu div:hover { background: rgba(255,255,255,0.08); }
 
-        #context-menu { position: absolute; display: none; background: #2d2d2d; border: 1px solid #555; box-shadow: 2px 2px 10px rgba(0,0,0,0.8); z-index: 1000; border-radius: 4px; padding: 5px 0; }
-        .context-menu-item { padding: 8px 15px; cursor: pointer; font-size: 12px; color: #fff; }
-        .context-menu-item:hover { background: #d63031; }
-
-        .block { position: absolute; background: #333; border: 1px solid #666; width: 100px; height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; font-size: 10px; z-index: 5; border-radius: 3px;}
-        .block.active { border: 2px solid #00ff00; box-shadow: 0 0 10px rgba(0,255,0,0.3); background: #444;}
-        .b-icon { font-size: 18px; color: #00a8ff; margin-bottom: 4px;}
-        svg#wires { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .wire { fill: none; stroke: #888; stroke-width: 2; stroke-dasharray: 4; animation: flow 1s linear infinite; }
-        @keyframes flow { to { stroke-dashoffset: -20; } }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #555; border-radius: 10px; }
     </style>
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
 </head>
 <body>
-
     <div class="status-tabbar">
         <div class="stat-group">
-            <span id="probe-info" style="color:#777"><b>Chưa kết nối</b> | <span style="color:#555">Đang dò tìm...</span></span>
-            <span>MODE: <b id="mode-text" style="color:#777"><i class="led" style="background:#777;"></i>OFFLINE</b></span>
-            <span>UPTIME: <b id="uptime" style="font-family: monospace;">00:00:00</b></span>
+            <span id="conn-status">
+                <span class="led" id="led-conn" style="background: red;"></span>
+                <span id="text-conn" style="color: red; font-weight: bold;">Chưa kết nối</span>
+            </span>
+            <span id="uptime-display" style="font-family: monospace; color: #a8c7fa; font-weight: bold;">UPTIME: 00:00:00</span>
+            <span id="mode-display" style="color: #ffeb3b; font-weight: bold;">MODE: OFFLINE</span>
         </div>
-        <button class="btn" style="background:#28a745; padding: 4px 15px;" onclick="if(backend) backend.js_open_plot_window()">📈 SCOPE</button>
+        <div class="stat-group">
+            <button class="btn" style="background: #5f6368; color: white;" onclick="toggleTheme()">🌓</button>
+            <button id="btn-connect" class="btn" style="background: #28a745; color: white;" onclick="if(window.backend) backend.js_toggle_backend()">🔌 CONNECT</button>
+            <button class="btn" style="background: var(--accent);" onclick="if(window.backend) backend.js_open_plot_window()">📊SCOPE</button>
+            <button class="btn" style="background: #6dd68f;" onclick="if(window.backend) backend.js_save_csv()">💾 SAVE CSV</button>
+        </div>
     </div>
 
-    <div class="workspace" id="workspace">
-        <div class="pane pane-tl">
-            <div class="pane-diagram" id="pane-diagram">
-                <div id="diagram-canvas">
-                    <svg id="wires">
-                        <path class="wire" d="M 150 120 L 250 120" />
-                        <path class="wire" d="M 350 120 L 450 120" />
-                        <path class="wire" d="M 550 120 L 650 120" />
+    <div class="main-wrapper">
+        <div class="top-section">
+            <div class="workspace-container" id="ws-container">
+                <div id="zoom-layer">
+                    <svg id="svg-layer">
+                        <defs>
+                            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text)" />
+                            </marker>
+                        </defs>
                     </svg>
-                    <div class="block" style="left: 50px; top: 90px;" onclick="clickBlock('SENSORS')"><div class="b-icon">⚡</div>ADC Sensors</div>
-                    <div class="block" style="left: 250px; top: 90px;" onclick="clickBlock('CLARKE')"><div class="b-icon">⍉</div>Clarke (α,β)</div>
-                    <div class="block" style="left: 450px; top: 90px;" onclick="clickBlock('PARK')"><div class="b-icon">⥀</div>Park (d,q)</div>
-                    <div class="block" style="left: 650px; top: 90px;" onclick="clickBlock('PI_CTRL')"><div class="b-icon">∑</div>PI Control</div>
+
+                    <div class="block" id="blk_pi_spd" style="top: 170px; left: 20px; width: 120px; height: 60px;">
+                        <div class="b-txt">PI Speed</div>
+                        <div class="node bottom" id="n_pi_spd_bot"></div>
+                        <div class="node out" id="n_pi_spd_out"></div>
+                    </div>
+
+                    <div class="block" id="blk_pi_iq" style="top: 170px; left: 180px; width: 120px; height: 60px;">
+                        <div class="b-txt">PI Iq</div>
+                        <div class="node in" id="n_iq_in" style="left: -6px; top: 50%;"></div>
+                        <div class="node out" id="n_iq_out"></div>
+                    </div>
+
+                    <div class="block" id="blk_pi_id" style="top: 260px; left: 180px; width: 120px; height: 60px;">
+                        <div class="b-txt">PI Id</div>
+                        <div class="node bottom" id="n_id_bot"></div>
+                        <div class="node out" id="n_id_out"></div>
+                    </div>
+
+                    <div class="block" id="blk_cp" style="top: 170px; left: 350px; width: 80px; height: 150px;">
+                        <div class="b-txt">CLARK<br>PARK</div>
+                        <div class="node in" id="n_cp_in_1" style="top: 20%;"></div>
+                        <div class="node in" id="n_cp_in_2" style="top: 80%;"></div>
+                        <div class="node bottom" id="n_cp_in_3"></div>
+                        <div class="node out" id="n_cp_out_1" style="top: 20%;"></div>
+                        <div class="node out" id="n_cp_out_2" style="top: 80%;"></div>
+                    </div>
+
+                    <div class="block" id="blk_svpwm" style="top: 170px; left: 480px; width: 80px; height: 150px;">
+                        <div class="b-txt">SVPWM</div>
+                        <div class="node in" id="n_sv_in_1" style="top: 20%;"></div>
+                        <div class="node in" id="n_sv_in_2" style="top: 80%;"></div>
+                        <div class="node out" id="n_sv_out_1" style="top: 20%;"></div>
+                        <div class="node out" id="n_sv_out_2" style="top: 80%;"></div>
+                    </div>
+
+                    <div class="block" id="blk_inv" style="top: 170px; left: 610px; width: 80px; height: 150px;">
+                        <div class="b-txt">INVERTER</div>
+                        <div class="node in" id="n_inv_in_1" style="top: 20%;"></div>
+                        <div class="node in" id="n_inv_in_2" style="top: 80%;"></div>
+                        <div class="node out" id="n_inv_out" style="top: 50%; right: -6px;"></div>
+                        <div class="node bottom" id="n_inv_bot"></div>
+                    </div>
+
+                    <div class="block" id="blk_pmsm" style="top: 440px; left: 610px; width: 80px; height: 80px;">
+                        <div class="b-txt">PMSM</div>
+                        <div class="node in" id="n_mot_in" style="top: 50%; right: -6px; left: auto;"></div>
+                        <div class="node out" id="n_mot_out" style="top: 50%; left: -6px; right: auto;"></div>
+                    </div>
+
+                    <div class="block" id="blk_sensor" style="top: 440px; left: 350px; width: 80px; height: 80px;">
+                        <div class="b-txt">SENSOR</div>
+                        <div class="node in" id="n_sens_in" style="top: 50%; right: -6px; left: auto;"></div>
+                        <div class="node out" id="n_sens_out_top" style="top: -6px; left: 50%;"></div>
+                        <div class="node out" id="n_sens_out_left" style="top: 50%; left: -6px; right: auto;"></div>
+                    </div>
+
+                    <div class="block" id="blk_inv_cp" style="top: 350px; left: 350px; width: 80px; height: 70px;">
+                        <div class="b-txt">INV<br>CLARK PARK</div>
+                        <div class="node bottom" id="n_icp_in_bot"></div>
+                        <div class="node in" id="n_icp_in_right" style="left: auto; right: -6px;"></div>
+                        <div class="node out" id="n_icp_out_top" style="top: -6px; left: 50%;"></div>
+                        <div class="node out" id="n_icp_out_id" style="left: -6px; top: 25%; right: auto;"></div>
+                        <div class="node out" id="n_icp_out_iq" style="left: -6px; top: 75%; right: auto;"></div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="resizer-v" id="resizer-v"></div>
+
+            <div class="right-panel" id="right-panel">
+                <div class="pane-header"><span>🗂️ ELF EXPLORER</span><button class="btn" style="width: auto; padding: 4px 10px; margin:0;" onclick="if(window.backend) backend.js_load_elf()">📂 LOAD ELF</button></div>
+                <div class="pane-content" style="display: flex; flex-direction: column;">
+                    <input type="text" class="search-box" id="elf-search" placeholder="🔍 Tìm tên biến..." style="width:100%; margin-bottom:10px;" onkeyup="filterElfList()">
+                    <div class="elf-header"><span>Variable Name</span><span>Type</span><span>Address</span><span>Action</span></div>
+                    <div id="elf-list"><div style="color: #777; padding: 15px; text-align: center;">Chưa nạp file ELF.</div></div>
                 </div>
             </div>
         </div>
 
-        <div class="pane pane-tr">
-            <div class="pane-header"><span>ELF EXPLORER</span><button class="btn" style="background:#d97706; padding: 4px 8px; font-size:10px;" onclick="if(backend) backend.js_load_elf()">📂 LOAD .ELF</button></div>
-            <div class="pane-content" style="padding:0;">
-                <div style="font-size:10px; color:#888; padding:5px 10px;">Gán vào: <b id="add-target-title" style="color:white">Chưa chọn khối</b></div>
-                <div class="table-container">
-                    <table id="tbl-elf">
-                        <thead><tr><th style="width: 15%;">Action</th><th style="width: 40%;">Variable Name</th><th style="width: 25%;">Address</th><th style="width: 20%;">Type</th></tr></thead>
-                        <tbody id="elf-body"><tr><td colspan="4" style="text-align:center; color:#777">Bấm Refresh ELF để tải</td></tr></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+        <div class="resizer-h" id="resizer-h"></div>
 
-        <div class="pane pane-bl">
-            <div class="pane-header">BLOCK PROPERTIES: <span id="prop-title" style="color:white">Chưa chọn</span></div>
-            <div class="pane-content" style="padding:0;">
-                <div class="table-container">
-                    <table id="tbl-prop">
-                        <thead><tr><th style="width: 8%;">Plot</th><th style="width: 28%;">Variable</th><th style="width: 15%;">Type Data</th><th style="width: 15%;">Address</th><th style="width: 14%;">Read Data</th><th style="width: 20%;">Write Data</th></tr></thead>
-                        <tbody id="prop-body"><tr><td colspan="6" style="text-align:center; color:#777">Click vào một Block để xem biến...</td></tr></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div class="pane pane-br">
-            <div class="pane-header">DATA CONTROLS</div>
+        <div class="bottom-panel" id="bottom-panel">
+            <div class="pane-header"><span>⚙️ MAPPING VARIABLES</span><span id="active-block-name" style="color: var(--accent);">[Chưa chọn khối]</span></div>
             <div class="pane-content">
-                <div style="background: #252526; border: 1px solid #444; padding: 10px; border-radius: 4px; display:flex; gap:10px; flex-direction:column;">
-                    <button class="btn" id="btn-pause" style="background:#ff9f43" onclick="togglePause()">⏸ STOP PLOT</button>
-                    <button class="btn" style="background:#00a8ff" onclick="if(backend) backend.js_save_csv()">💾 SAVE DATA (.CSV)</button>
-                    <button class="btn" style="background:#9b59b6" onclick="if(backend) backend.js_load_csv()">📂 LOAD DATA (REVIEW)</button>
-                </div>
+                <table>
+                    <thead><tr><th style="width:50px; text-align:center;">Plot</th><th>Variable Name</th><th>Type</th><th>Address</th><th>Read Data (Realtime)</th><th>Write Data</th></tr></thead>
+                    <tbody id="prop-body">
+                        <tr><td colspan="6" style="text-align:center; color:#777; padding: 20px;">Vui lòng Click vào một Block phía trên.</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-
-        <div id="v-resizer-top" class="resizer v-resizer"></div>
-        <div id="v-resizer-bot" class="resizer v-resizer"></div>
-        <div id="h-resizer-left" class="resizer h-resizer"></div>
-        <div id="h-resizer-right" class="resizer h-resizer"></div>
     </div>
 
-    <div id="context-menu"><div class="context-menu-item" onclick="deleteVariable()">❌ Xóa biến khỏi Block</div></div>
+    <div id="ctx-menu" class="context-menu">
+        <div id="ctx-delete-var" onclick="deleteVariable()">🗑️ Xóa biến khỏi Block</div>
+    </div>
 
     <script>
-        // GRID RESIZER
-        const ws = document.getElementById('workspace');
-        function setupGridResizer(id, cssVar, isVertical) {
-            const resizer = document.getElementById(id);
-            resizer.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                const move = (ev) => {
-                    const rect = ws.getBoundingClientRect();
-                    let val = isVertical ? ((ev.clientX - rect.left) / rect.width) * 100 : ((ev.clientY - rect.top) / rect.height) * 100;
-                    ws.style.setProperty(cssVar, `${Math.max(5, Math.min(val, 95))}%`);
-                };
-                const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
-                document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
-            });
+        var backend = null;
+        var blockDB = {};
+        var activeBlock = null;
+        var elfDataGlobal = {};
+
+        let scale = 1, panX = 0, panY = 0;
+        let isPanning = false, startPanX = 0, startPanY = 0;
+        let plottedVars = [];
+        var appState = 'offline';
+        var uptimeSeconds = 0;
+        var uptimeInterval = null;
+
+        new QWebChannel(qt.webChannelTransport, function (channel) {
+            window.backend = channel.objects.backend;
+            if(window.backend) window.backend.js_request_sync();
+        });
+
+        function syncConfig(data) {
+            if (typeof data === 'string') {
+                try { data = JSON.parse(data); } catch(e) { console.error("Parse JSON error", e); return; }
+            }
+            blockDB = data;
+            // Bảo toàn plottedVars hiện tại — KHÔNG reset, chỉ render lại bảng với state đang có
+            if(activeBlock) renderPropertiesTable();
+            drawLines();
         }
-        setupGridResizer('v-resizer-top', '--x-top', true); setupGridResizer('v-resizer-bot', '--x-bot', true);
-        setupGridResizer('h-resizer-left', '--y-left', false); setupGridResizer('h-resizer-right', '--y-right', false);
 
-        // TABLE COLUMN RESIZER
-        function makeTableResizable(tableId) {
-            const table = document.getElementById(tableId);
-            const cols = table.querySelectorAll('th');
-            [].forEach.call(cols, function (col) {
-                const resizer = document.createElement('div');
-                resizer.classList.add('col-resizer');
-                col.appendChild(resizer);
-                let x = 0, w = 0;
-                resizer.addEventListener('mousedown', function (e) {
-                    x = e.clientX; w = col.offsetWidth;
-                    document.addEventListener('mousemove', mouseMoveHandler);
-                    document.addEventListener('mouseup', mouseUpHandler);
-                });
-                const mouseMoveHandler = function (e) { col.style.width = `${w + e.clientX - x}px`; };
-                const mouseUpHandler = function () { document.removeEventListener('mousemove', mouseMoveHandler); document.removeEventListener('mouseup', mouseUpHandler); };
-            });
-        }
-        makeTableResizable('tbl-elf');
-        makeTableResizable('tbl-prop');
-
-        // ZOOM PAN
-        const paneTop = document.getElementById('pane-diagram'); const canvas = document.getElementById('diagram-canvas');
-        let scale = 1, panX = 0, panY = 0, isPanning = false, startX, startY;
-        paneTop.addEventListener('wheel', (e) => { e.preventDefault(); scale += -e.deltaY * 0.001; scale = Math.max(0.3, Math.min(scale, 3)); canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; });
-        paneTop.addEventListener('mousedown', (e) => { if(e.target === paneTop || e.target === canvas || e.target.tagName === 'svg') { isPanning = true; startX = e.clientX - panX; startY = e.clientY - panY; } });
-        window.addEventListener('mousemove', (e) => { if(isPanning) { panX = e.clientX - startX; panY = e.clientY - startY; canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; } });
-        window.addEventListener('mouseup', () => { isPanning = false; });
-
-        // TƯƠNG TÁC PYTHON
-        var backend; let activeBlock = null; let appState = 'offline'; let blockDB = {}; let elfDB = {}; let varToDelete = null;
-        new QWebChannel(qt.webChannelTransport, function (channel) { backend = channel.objects.py_bridge; backend.js_request_sync(); });
-
-        function clickBlock(name) {
-            const el = event.currentTarget;
-            if (activeBlock === name) {
-                activeBlock = null; el.classList.remove('active');
-                document.getElementById('prop-title').innerText = 'Chưa chọn'; document.getElementById('add-target-title').innerText = 'Chưa chọn khối';
-                document.getElementById('prop-body').innerHTML = '<tr><td colspan="6" style="text-align:center; color:#777">Click vào một Block để xem biến...</td></tr>';
+        function updateConnectBtn(isRunning) {
+            const btn = document.getElementById('btn-connect');
+            if (isRunning) {
+                btn.innerText = "🛑 DISCONNECT C++";
+                btn.style.background = "#dc3545";
             } else {
-                activeBlock = name; document.querySelectorAll('.block').forEach(b => b.classList.remove('active')); el.classList.add('active');
-                document.getElementById('prop-title').innerText = name; document.getElementById('add-target-title').innerText = name;
+                btn.innerText = "🔌 CONNECT C++";
+                btn.style.background = "#28a745";
+            }
+        }
+
+        const wsContainer = document.getElementById('ws-container');
+        wsContainer.addEventListener('wheel', e => {
+            e.preventDefault();
+            scale += e.deltaY * -0.001;
+            scale = Math.min(Math.max(0.4, scale), 3);
+            updateTransform();
+        }, { passive: false });
+
+        wsContainer.addEventListener('mousedown', e => {
+            if(e.button === 1 || e.button === 0) {
+                isPanning = true; startPanX = e.clientX - panX; startPanY = e.clientY - panY;
+            }
+        });
+        document.addEventListener('mousemove', e => {
+            if(isPanning) { panX = e.clientX - startPanX; panY = e.clientY - startPanY; updateTransform(); }
+        });
+        document.addEventListener('mouseup', () => { isPanning = false; });
+
+        function updateTransform() { document.getElementById('zoom-layer').style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; }
+
+        document.querySelectorAll('.block').forEach(block => {
+            block.addEventListener('click', e => {
+                document.querySelectorAll('.block').forEach(b => b.classList.remove('active'));
+                block.classList.add('active'); activeBlock = block.id;
+                document.getElementById('active-block-name').innerText = block.querySelector('.b-txt').innerText.replace('\n',' ');
                 renderPropertiesTable();
-            }
-        }
-
-        function syncConfig(jsonConfig) { blockDB = jsonConfig; if(activeBlock) renderPropertiesTable(); }
-        function syncElf(jsonElf) { elfDB = jsonElf; renderElfTable(); }
-        function refreshElf() { if(appState === 'offline') { alert("Chưa kết nối MCU!"); return; } backend.js_refresh_elf(); }
-
-        function setAppMode(mode, probeText = null) {
-            appState = mode; const textEl = document.getElementById('mode-text'); const probeEl = document.getElementById('probe-info'); const btnPause = document.getElementById('btn-pause');
-            if (probeText) probeEl.innerHTML = `<b style="color:white">${probeText.split('|')[0]}</b> | <span style="color:#00a8ff">${probeText.split('|')[1]}</span>`;
-            if (mode === 'offline') { textEl.innerHTML = "<i class='led' style='background:#777;'></i>OFFLINE"; textEl.style.color = "#777"; btnPause.disabled = true; }
-            else if (mode === 'realtime') { textEl.innerHTML = "<i class='led' style='background:#00ff00; box-shadow: 0 0 8px #00ff00;'></i>REAL-TIME"; textEl.style.color = "#00ff00"; btnPause.innerHTML = "⏸ TẠM DỪNG PLOT"; btnPause.style.background = "#ff9f43"; btnPause.disabled = false; }
-            else if (mode === 'paused') { textEl.innerHTML = "<i class='led' style='background:#ffcc00; box-shadow: 0 0 8px #ffcc00;'></i>PAUSED"; textEl.style.color = "#ffcc00"; btnPause.innerHTML = "▶ TIẾP TỤC PLOT"; btnPause.style.background = "#28a745"; }
-            else if (mode === 'review') { textEl.innerHTML = "<i class='led' style='background:#9b59b6; box-shadow: 0 0 8px #9b59b6;'></i>REVIEW DATA"; textEl.style.color = "#9b59b6"; btnPause.disabled = true; }
-        }
-
-        function renderElfTable() {
-            let html = '';
-            for (const [varName, info] of Object.entries(elfDB)) {
-                html += `<tr class="data-row"><td style="text-align:center"><button class="btn-add" onclick="assignFromElf('${varName}', '${info.addr}', '${info.type}')">+ Thêm</button></td><td style="font-weight:bold; color:#fff">${varName}</td><td style="color:#00a8ff; font-family:monospace;">${info.addr}</td><td style="color:#888">${info.type}</td></tr>`;
-            }
-            document.getElementById('elf-body').innerHTML = html;
-        }
-
-        function assignFromElf(vName, vAddr, vType) {
-            if(!activeBlock) { alert("Click chọn 1 Block trên sơ đồ!"); return; }
-            if(!blockDB[activeBlock]) blockDB[activeBlock] = [];
-            let exists = blockDB[activeBlock].find(x => x.id === vName);
-            if(exists) { exists.addr = vAddr; exists.type = vType; } else { blockDB[activeBlock].push({id: vName, addr: vAddr, type: vType}); }
-            renderPropertiesTable();
-            if(backend) backend.js_save_mapping(activeBlock, vName, vAddr, vType);
-        }
-
-        function renderPropertiesTable() {
-            const vars = blockDB[activeBlock] || [];
-            let html = '';
-            vars.forEach(v => {
-                html += `<tr class="data-row" oncontextmenu="showContextMenu(event, '${v.id}')">
-                    <td style="text-align:center;"><input type="checkbox" onchange="if(backend) backend.js_toggle_var_to_plot('${v.id}', this.checked)"></td>
-                    <td><b>${v.id}</b></td>
-
-                    <td style="color:#00a8ff; font-weight:bold; font-family:monospace;">${v.type}</td>
-
-                    <td style="color:#00a8ff; font-family:monospace;">${v.addr}</td>
-                    <td class="val-read" id="read-${v.id}">0.00</td>
-                    <td>
-                        <input type="text" placeholder="Enter"
-                               onkeydown="if(event.key === 'Enter') writeDataToMCU('${v.addr}', this.value, this, '${v.type}')"
-                               style="width: 85%; font-size:11px; background:#111; color:#fff; border:1px solid #555; padding: 2px;">
-                    </td>
-                </tr>`;
             });
-            if(html === '') html = '<tr><td colspan="6" style="text-align:center; color:#777">Khối này chưa gán biến.</td></tr>';
-            document.getElementById('prop-body').innerHTML = html;
+        });
+
+        function getPt(id) {
+            const el = document.getElementById(id);
+            if(!el) return {x:0,y:0};
+            const zr = document.getElementById('zoom-layer').getBoundingClientRect();
+            const r = el.getBoundingClientRect();
+            return { x: (r.left + r.width/2 - zr.left)/scale, y: (r.top + r.height/2 - zr.top)/scale };
         }
 
-        function showContextMenu(e, varName) {
-            e.preventDefault(); varToDelete = varName;
-            const menu = document.getElementById('context-menu');
-            menu.style.display = 'block'; menu.style.left = e.pageX + 'px';
-            menu.style.top = e.pageY + 'px'; }
+        function drawLines() {
+            const svg = document.getElementById('svg-layer');
+            const markerHTML = `<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--line-stroke)" /></marker></defs>`;              let pathHTML = '';
 
-        window.addEventListener('click', () => { document.getElementById('context-menu').style.display = 'none'; });
+            function route(d) {
+                pathHTML += `<path d="${d}" class="path-line" marker-end="url(#arrow)"></path>`;
+            }
+
+            let p1, p2;
+
+            p1 = getPt('n_pi_spd_out'); p2 = getPt('n_iq_in');
+            route(`M ${p1.x},${p1.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_iq_out'); p2 = getPt('n_cp_in_1');
+            route(`M ${p1.x},${p1.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_id_out'); p2 = getPt('n_cp_in_2');
+            route(`M ${p1.x},${p1.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_cp_out_1'); p2 = getPt('n_sv_in_1'); route(`M ${p1.x},${p1.y} L ${p2.x},${p2.y}`);
+            p1 = getPt('n_cp_out_2'); p2 = getPt('n_sv_in_2'); route(`M ${p1.x},${p1.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_sv_out_1'); p2 = getPt('n_inv_in_1'); route(`M ${p1.x},${p1.y} L ${p2.x},${p2.y}`);
+            p1 = getPt('n_sv_out_2'); p2 = getPt('n_inv_in_2'); route(`M ${p1.x},${p1.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_inv_out'); p2 = getPt('n_mot_in');
+            route(`M ${p1.x},${p1.y} L ${p1.x+30},${p1.y} L ${p1.x+30},${p2.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_mot_out'); p2 = getPt('n_sens_in');
+            route(`M ${p1.x},${p1.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_sens_out_top'); p2 = getPt('n_icp_in_bot');
+            route(`M ${p1.x},${p1.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_icp_out_top'); p2 = getPt('n_cp_in_3');
+            route(`M ${p1.x},${p1.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_sens_out_left'); p2 = getPt('n_pi_spd_bot');
+            route(`M ${p1.x},${p1.y} L ${p2.x},${p1.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_icp_out_id'); p2 = getPt('n_id_bot');
+            route(`M ${p1.x},${p1.y} L ${p2.x},${p1.y} L ${p2.x},${p2.y}`);
+
+            p1 = getPt('n_icp_out_iq'); p2 = getPt('n_iq_in');
+            route(`M ${p1.x},${p1.y} L ${p2.x-20},${p1.y} L ${p2.x-20},${p2.y+20} L ${p2.x},${p2.y+20}`);
+
+            p1 = getPt('n_inv_bot'); p2 = getPt('n_icp_in_right');
+            route(`M ${p1.x},${p1.y} L ${p1.x},${p2.y} L ${p2.x},${p2.y}`);
+
+            svg.innerHTML = markerHTML + pathHTML;
+        }
+
+        let varToDelete = null;
+        window.addEventListener('contextmenu', e => {
+            if (e.target.closest('#prop-body')) return;
+            e.preventDefault();
+            document.getElementById('ctx-menu').style.display = 'none';
+        });
+
+        function showContextMenu(e, type, varName=null) {
+            e.preventDefault(); e.stopPropagation();
+            if (type === 'var') { varToDelete = varName; document.getElementById('ctx-delete-var').style.display = 'block'; }
+            const menu = document.getElementById('ctx-menu');
+            menu.style.display = 'block'; menu.style.left = e.pageX + 'px'; menu.style.top = e.pageY + 'px';
+        }
+        window.addEventListener('click', () => { document.getElementById('ctx-menu').style.display = 'none'; });
 
         function deleteVariable() {
             if(!activeBlock || !varToDelete) return;
             blockDB[activeBlock] = blockDB[activeBlock].filter(v => v.id !== varToDelete);
-            renderPropertiesTable(); if(backend) backend.js_remove_mapping(activeBlock, varToDelete);
+            renderPropertiesTable();
+            if(backend) backend.js_remove_mapping(activeBlock, varToDelete);
         }
 
-        function togglePause() {
-            if(appState === 'offline' || appState === 'review') return;
-            setAppMode(appState === 'realtime' ? 'paused' : 'realtime');
-            if(backend) backend.js_toggle_pause(appState === 'paused');
+        let _toggleInProgress = false;
+
+        function syncPlottedVars(varsArray) {
+            // Bỏ qua nếu user đang trong quá trình toggle để tránh race condition
+            if (_toggleInProgress) return;
+            plottedVars = Array.isArray(varsArray) ? varsArray.slice() : [];
+            document.querySelectorAll('.plot-checkbox').forEach(cb => {
+                const shouldBeChecked = plottedVars.includes(cb.getAttribute('data-varid'));
+                if (cb.checked !== shouldBeChecked) cb.checked = shouldBeChecked;
+            });
         }
 
-        //setInterval(() => { if(appState === 'realtime') { document.querySelectorAll('.val-read').forEach(el => { el.innerText = (Math.random()*10).toFixed(2); }); } }, 1000);
+        function togglePlot(varId, isChecked) {
+            const alreadyIn = plottedVars.includes(varId);
+            if (isChecked && !alreadyIn) {
+                plottedVars.push(varId);
+            } else if (!isChecked && alreadyIn) {
+                plottedVars = plottedVars.filter(id => id !== varId);
+            } else {
+                // Trạng thái đã đúng, không cần gửi lệnh
+                return;
+            }
+            if (window.backend) {
+                // Đặt cờ bảo vệ: trong khi chờ backend phản hồi, syncPlottedVars không được override
+                _toggleInProgress = true;
+                backend.js_toggle_var_to_plot(varId, isChecked);
+                // Giải phóng cờ sau 300ms — đủ để backend xử lý xong và gọi lại syncPlottedVars
+                setTimeout(() => { _toggleInProgress = false; }, 300);
+            }
+        }
+
+        function syncElf(elfJson) { elfDataGlobal = elfJson; renderElfList(); }
+        function filterElfList() { renderElfList(document.getElementById('elf-search').value); }
+        function renderElfList(filterText = '') {
+            const listDiv = document.getElementById('elf-list'); listDiv.innerHTML = '';
+            const filterUpper = filterText.toUpperCase();
+            for (const [varName, info] of Object.entries(elfDataGlobal)) {
+                if (filterUpper && !varName.toUpperCase().includes(filterUpper)) continue;
+                listDiv.innerHTML += `<div class="elf-item">
+                    <span style="color: var(--text);">${varName}</span>
+                    <span style="color: var(--text-muted);">${info.type}</span>
+                    <span style="color: var(--accent);">${info.addr}</span>
+                    <button class="elf-add-btn" onclick="addVarToActiveBlock('${varName}', '${info.addr}', '${info.type}')">Thêm</button>
+                </div>`;
+            }
+        }
+
+        function addVarToActiveBlock(varName, addr, type) {
+            if (!activeBlock) { alert("Vui lòng chọn một Block bên trên!"); return; }
+            if (!blockDB[activeBlock]) blockDB[activeBlock] = [];
+            if (blockDB[activeBlock].find(v => v.id === varName)) return;
+            blockDB[activeBlock].push({ id: varName, addr: addr, type: type });
+            if (window.backend) window.backend.js_save_mapping(activeBlock, varName, addr, type);
+            renderPropertiesTable();
+        }
+
+        function renderPropertiesTable() {
+            const vars = blockDB[activeBlock] || []; let html = '';
+            vars.forEach(v => {
+                const isChecked = plottedVars.includes(v.id) ? 'checked' : '';
+                html += `<tr class="data-row" oncontextmenu="showContextMenu(event, 'var', '${v.id}')">
+                <td style="text-align:center;">
+                    <input type="checkbox"
+                           class="plot-checkbox"
+                           data-varid="${v.id}"
+                           ${isChecked}
+                           onchange="togglePlot('${v.id}', this.checked)"
+                           onclick="event.stopPropagation()">
+                </td>
+                <td style="color: var(--text); font-weight:bold;">${v.id}</td>
+                <td style="color: var(--accent);">${v.type}</td>
+                <td style="color: var(--text-muted);">${v.addr}</td>
+
+                <td class="val-read" id="read-${v.id}">0.00</td>
+                <td>
+                    <input type="text"
+                           placeholder="Gõ số & Enter..."
+                           onclick="event.stopPropagation()"
+                           onkeydown="if(event.key === 'Enter') writeDataToMCU('${v.addr}', this.value, this, '${v.type}')">
+                </td>
+            </tr>`;
+            });
+            document.getElementById('prop-body').innerHTML = html || '<tr><td colspan="6" style="text-align:center; padding: 20px; color:#777">Chưa gán biến. Hãy chọn từ ELF Explorer ở trên.</td></tr>';
+        }
 
         function writeDataToMCU(address, valueStr, inputEl, dataType) {
             if (valueStr.trim() === "") return;
-            if (backend) {
-                backend.js_write_data(address, valueStr, dataType); // Gửi kèm type tự động xuống Python
-                inputEl.style.borderColor = "#00ff00";
-                inputEl.value = "";
-                inputEl.blur();
-                setTimeout(() => { inputEl.style.borderColor = "#555"; }, 500);
+            if (window.backend) { backend.js_write_data(address, valueStr, dataType); inputEl.value = ""; inputEl.blur(); }
+        }
+
+        function setAppMode(mode) {
+            const modeEl = document.getElementById('mode-display');
+            const ledConn = document.getElementById('led-conn');
+            const textConn = document.getElementById('text-conn');
+            const uptimeEl = document.getElementById('uptime-display');
+
+            if (!modeEl || !ledConn || !textConn) return;
+
+            appState = mode;
+
+            if (mode === 'realtime') {
+                modeEl.innerText = "MODE: REAL-TIME";
+                modeEl.style.color = "#00ff00";
+                ledConn.style.background = "#00ff00";
+                textConn.innerText = "Đã kết nối MCU";
+                textConn.style.color = "#00ff00";
+
+                if (!uptimeInterval) {
+                    uptimeInterval = setInterval(() => {
+                        uptimeSeconds++;
+                        const h = Math.floor(uptimeSeconds / 3600).toString().padStart(2, '0');
+                        const m = Math.floor((uptimeSeconds % 3600) / 60).toString().padStart(2, '0');
+                        const s = (uptimeSeconds % 60).toString().padStart(2, '0');
+                        if (uptimeEl) uptimeEl.innerText = `UPTIME: ${h}:${m}:${s}`;
+                    }, 1000);
+                }
+            } else if (mode === 'review') {
+                modeEl.innerText = "MODE: REVIEW (CSV)";
+                modeEl.style.color = "#00e5ff";
+                ledConn.style.background = "#00e5ff";
+                textConn.innerText = "Đọc File Offline";
+                textConn.style.color = "#00e5ff";
+                if (uptimeInterval) {
+                    clearInterval(uptimeInterval);
+                    uptimeInterval = null;
+                }
+            } else if (mode === 'paused') {
+                modeEl.innerText = "MODE: PAUSED";
+                modeEl.style.color = "#ffeb3b";
+                ledConn.style.background = "#ffeb3b";
+                textConn.innerText = "Tạm dừng Plot";
+                textConn.style.color = "#ffeb3b";
+            } else {
+                modeEl.innerText = "MODE: OFFLINE";
+                modeEl.style.color = "#ffeb3b";
+                ledConn.style.background = "red";
+                textConn.innerText = "Chưa kết nối";
+                textConn.style.color = "red";
+                if (uptimeInterval) {
+                    clearInterval(uptimeInterval);
+                    uptimeInterval = null;
+                }
+                uptimeSeconds = 0;
+                if (uptimeEl) uptimeEl.innerText = `UPTIME: 00:00:00`;
+            }
+        }
+
+        function updateRealtimeData(data) {
+            if (appState === 'offline') {
+                setAppMode('realtime');
             }
         }
 
         function updateReadDataFromPython(dataJson) {
             const data = JSON.parse(dataJson);
-            for (const [varName, value] of Object.entries(data)) {
-                const el = document.getElementById(`read-${varName}`);
-                if (el) el.innerText = value.toFixed(4);
+            for (const [varName, value] of Object.entries(data)) { const el = document.getElementById(`read-${varName}`); if (el) el.innerText = value.toFixed(4); }
+        }
+
+        const resizerV = document.getElementById('resizer-v'); const resizerH = document.getElementById('resizer-h');
+        let isResizingV = false, isResizingH = false;
+        resizerV.addEventListener('mousedown', () => { isResizingV = true; });
+        resizerH.addEventListener('mousedown', () => { isResizingH = true; });
+        document.addEventListener('mousemove', (e) => {
+            if (isResizingV) { const rightW = document.body.clientWidth - e.clientX - 3; if(rightW > 300 && rightW < 800) { document.getElementById('right-panel').style.width = `${rightW}px`; document.getElementById('ws-container').style.width = `calc(100% - ${rightW}px - 6px)`; } }
+            if (isResizingH) { const bottomH = document.querySelector('.main-wrapper').clientHeight - e.clientY + 48; if(bottomH > 150 && bottomH < 600) { document.getElementById('bottom-panel').style.height = `${bottomH}px`; document.querySelector('.top-section').style.height = `calc(100% - ${bottomH}px - 6px)`; } }
+        });
+        document.addEventListener('mouseup', () => { isResizingV = false; isResizingH = false; drawLines(); });
+
+        window.addEventListener('resize', drawLines); setTimeout(drawLines, 200);
+
+        function toggleTheme() {
+            const htmlEl = document.documentElement;
+            const currentTheme = htmlEl.getAttribute('data-theme');
+
+            if (currentTheme === 'light') {
+                // Quay về chế độ Dark Mode mặc định
+                htmlEl.removeAttribute('data-theme');
+            } else {
+                // Chuyển sang Light Mode
+                htmlEl.setAttribute('data-theme', 'light');
+            }
+
+            // Kích hoạt vẽ lại sơ đồ kết nối để cập nhật màu sắc dây dẫn tức thời
+            if (typeof drawLines === 'function') {
+                drawLines();
             }
         }
 
-        function updateVarType(varId, newType) {
-            const v = blockDB[activeBlock].find(x => x.id === varId);
-            if(v) {
-                v.type = newType;
-                if(backend) backend.js_save_mapping(activeBlock, v.id, v.addr, newType); // Tự động lưu json
-                renderPropertiesTable(); // Cập nhật lại giao diện
-            }
-        }
     </script>
 </body>
 </html>

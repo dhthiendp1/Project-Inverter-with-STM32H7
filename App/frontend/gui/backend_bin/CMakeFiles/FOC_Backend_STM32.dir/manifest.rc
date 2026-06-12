@@ -1,0 +1,2 @@
+#pragma code_page(65001)
+1 /* CREATEPROCESS_MANIFEST_RESOURCE_ID */ 24 /* RT_MANIFEST */ "C:/Users/huy20/OneDrive/Documents/Project-Inverter-with-STM32H7/App/backend/out/build/x64-Release/CMakeFiles/FOC_Backend_STM32.dir/embed.manifest"
