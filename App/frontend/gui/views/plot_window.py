@@ -13,14 +13,12 @@ class PlotWindow(QMainWindow):
         self.setWindowTitle("SCOPE")
         self.resize(1300, 800)
 
-        # FIX LỖI CỘT NUMBER TRẮNG & NÂNG CẤP ĐỘ TƯƠNG PHẢN GIAO DIỆN SCOPE
         self.setStyleSheet("""
             QMainWindow { background-color: #131314; color: #ffffff; }
             QWidget { color: #ffffff; font-family: 'Segoe UI', sans-serif; }
 
             QTableWidget { background-color: #1e1f20; color: #ffffff; border: 1px solid #444746; border-radius: 6px; gridline-color: #333333; font-size: 12px; }
 
-            /* Sửa lỗi cột Vertical Header (Số thứ tự) màu trắng lóa */
             QHeaderView::section { background-color: #2a2b2e; border: none; border-bottom: 1px solid #444746; border-right: 1px solid #444746; padding: 6px; font-weight: bold; color: #a8c7fa;}
             QHeaderView::section:vertical { background-color: #1e1f20; color: #a8c7fa; }
             QTableCornerButton::section { background-color: #1e1f20; border: none; border-bottom: 1px solid #444746; border-right: 1px solid #444746; }
@@ -351,7 +349,6 @@ class PlotWindow(QMainWindow):
                         chk_box.setChecked(False)
                     chk_box.blockSignals(False)
 
-    # ĐỒNG BỘ DẤU TICK XUỐNG HTML MỖI KHI CÓ SỰ THAY ĐỔI
     def sync_plot_state_to_html(self):
         if hasattr(self, 'main_app') and self.main_app:
             plotted_vars = list(self.curves.keys())
