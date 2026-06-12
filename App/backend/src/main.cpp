@@ -33,7 +33,7 @@ void loadConfiguration(const std::string& path, std::vector<FOC::VariableConfig>
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     std::cout << "=== FOC SYSTEM BACKEND (ST-LINK & ZMQ) ===" << std::endl;
 
     FOC::StlinkReader reader;
@@ -47,7 +47,14 @@ int main() {
     std::vector<FOC::VariableConfig> active_vars;
 
     std::string config_path = FRONTEND_JSON_PATH;
-
+    if (argc > 1) {
+        config_path = argv[1];
+        std::cout << "[Backend] Nhan duong dan JSON thuc te: " << config_path << std::endl;
+    }
+    else {
+        config_path = FRONTEND_JSON_PATH;
+        std::cout << "[Backend] Khong co tham so, dung duong dan mac dinh: " << config_path << std::endl;
+    }
     // Nạp cấu hình lần đầu lúc khởi động
     loadConfiguration(config_path, active_vars);
     // Kênh nhận lệnh từ Python (Cổng 5557)
@@ -101,7 +108,7 @@ int main() {
         }
 
         pub.sendData(frame);
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
     return 0;
 }

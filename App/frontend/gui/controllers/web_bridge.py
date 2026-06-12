@@ -43,8 +43,11 @@ class WebBridge(QObject):
                 QMessageBox.critical(self.main_app, "Lỗi",
                                      f"Không tìm thấy file:\n{exe_path}\n\nVui lòng copy FOC_Backend_STM32.exe vào thư mục backend_bin")
                 return
+
+            mapping_json_path = self._get_json_path()
+
             try:
-                self.main_app.backend_process = subprocess.Popen([exe_path])
+                self.main_app.backend_process = subprocess.Popen([exe_path, mapping_json_path])
                 self.main_app.web.page().runJavaScript("updateConnectBtn(true);")
             except Exception as e:
                 QMessageBox.critical(self.main_app, "Lỗi", f"Không thể chạy file: {e}")

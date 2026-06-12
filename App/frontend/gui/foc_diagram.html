@@ -4,18 +4,47 @@
     <meta charset="UTF-8">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
-        :root { color-scheme: dark; --bg-black: #131314; --panel-bg: #1e1f20; --accent: #a8c7fa; --border: #444746; --text: #e3e3e3; --text-muted: #c4c7c5; --radius-lg: 12px; --radius-sm: 6px;}
+        :root {
+            color-scheme: dark;
+            --bg-black: #131314;
+            --panel-bg: #1e1f20;
+            --accent: #a8c7fa;
+            --border: #444746;
+            --text: #e3e3e3;
+            --text-muted: #c4c7c5;
+            --radius-lg: 12px;
+            --radius-sm: 6px;
+            --workspace-bg: #050505;
+            --table-header-bg: #2a2b2e;
+            --btn-text: #131314;
+            --line-stroke: #e3e3e3;
+            --hover-bg: rgba(255, 255, 255, 0.05);
+        }
+        :root[data-theme="light"] {
+            color-scheme: light;
+            --bg-black: #f0f4f9;
+            --panel-bg: #ffffff;
+            --accent: #0b57d0;
+            --border: #c4c7c5;
+            --text: #1f1f1f;
+            --text-muted: #474747;
+            --workspace-bg: #f8f9fa;
+            --table-header-bg: #e0e2ec;
+            --btn-text: #ffffff;
+            --line-stroke: #1f1f1f;
+            --hover-bg: rgba(0, 0, 0, 0.04);
+        }
         body { margin: 0; padding: 0; background: var(--bg-black); color: var(--text); font-family: 'Google Sans', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
         .status-tabbar { height: 48px; background: var(--bg-black); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid var(--border); z-index: 1000;}
         .stat-group { display: flex; gap: 20px; align-items: center;}
         .led { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; box-shadow: 0 0 5px currentColor; transition: 0.3s;}
-        .btn { background: var(--accent); color: #000; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 600; transition: 0.2s;}
+        .btn { background: var(--accent); color: var(--btn-text); border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 600; transition: 0.2s;}
         .plot-checkbox {width: 18px;height: 18px;cursor: pointer;vertical-align: middle;}
         .main-wrapper { display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; }
         .top-section { display: flex; flex-grow: 1; overflow: hidden; height: 60%; }
 
-        .workspace-container { flex-grow: 1; position: relative; overflow: hidden; background: #000000; width: 60%; cursor: grab;}
+        .workspace-container { flex-grow: 1; position: relative; overflow: hidden; background: var(--workspace-bg); width: 60%; cursor: grab;}
         .workspace-container:active { cursor: grabbing; }
         .resizer-v { width: 6px; background: var(--panel-bg); border-left: 1px solid var(--border); border-right: 1px solid var(--border); cursor: col-resize; z-index: 100;}
         .right-panel { width: 40%; background: var(--panel-bg); display: flex; flex-direction: column; z-index: 30; overflow: hidden; }
@@ -24,8 +53,7 @@
 
         #zoom-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform-origin: 0 0; }
 
-        .block { position: absolute; background: var(--panel-bg); border: 2px solid #555; border-radius: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 10; cursor: pointer; user-select: none; box-sizing: border-box;}
-        .block.active { border-color: var(--accent); box-shadow: 0 0 15px rgba(168, 199, 250, 0.4); z-index: 20; }
+        .block { position: absolute; background: var(--panel-bg); border: 2px solid var(--border); border-radius: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10; cursor: pointer; user-select: none; box-sizing: border-box;}        .block.active { border-color: var(--accent); box-shadow: 0 0 15px rgba(168, 199, 250, 0.4); z-index: 20; }
 
         .b-txt { font-weight: bold; text-align: center; font-size: 13px; color: var(--text); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;}
 
@@ -36,19 +64,17 @@
         .node.bottom { bottom: -6px; left: 50%; transform: translateX(-50%); }
 
         svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; overflow: visible;}
-        .path-line { fill: none; stroke: var(--text); stroke-width: 1.5; opacity: 0.9; stroke-linejoin: round; }
-
+        .path-line { fill: none; stroke: var(--line-stroke); stroke-width: 1.5; opacity: 0.9; stroke-linejoin: round; }
         .pane-header { padding: 12px 20px; background: rgba(255,255,255,0.03); font-weight: bold; border-bottom: 1px solid var(--border); font-size: 13px; display: flex; justify-content: space-between; align-items: center;}
         .pane-content { padding: 15px 20px; overflow-y: auto; flex-grow: 1; }
         table { width: 100%; border-collapse: collapse; font-size: 12px; background: var(--bg-black); }
         th, td { border: 1px solid var(--border); padding: 8px; text-align: left; }
-        th { background: #2a2b2e; color: var(--accent); font-weight: bold; }
-        .data-row:hover { background: rgba(255,255,255,0.05);}
+        th { background: var(--table-header-bg); color: var(--accent); font-weight: bold; }
+        .data-row:hover { background: var(--hover-bg);}
 
         input[type="text"] { background: var(--bg-black); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; outline: none; width: 90%;}
-        .elf-header { display: grid; grid-template-columns: 3fr 1.5fr 1.5fr 80px; font-weight: bold; color: var(--accent); padding: 8px; border-bottom: 1px solid var(--border); font-size: 12px; background: #2a2b2e;}
-        .elf-item { display: grid; grid-template-columns: 3fr 1.5fr 1.5fr 80px; padding: 6px 8px; border-bottom: 1px solid var(--border); align-items: center; font-family: monospace; font-size: 11px;}
-        .elf-item:hover { background: rgba(255,255,255,0.05); }
+        .elf-header { display: grid; grid-template-columns: 3fr 1.5fr 1.5fr 80px; font-weight: bold; color: var(--accent); padding: 8px; border-bottom: 1px solid var(--border); font-size: 12px; background: var(--table-header-bg);}        .elf-item { display: grid; grid-template-columns: 3fr 1.5fr 1.5fr 80px; padding: 6px 8px; border-bottom: 1px solid var(--border); align-items: center; font-family: monospace; font-size: 11px;}
+        .elf-item:hover { background: var(--hover-bg); }
         .elf-add-btn { background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 4px 8px; border-radius: 12px; cursor: pointer; font-size: 11px; font-weight: bold;}
 
         .context-menu { position: absolute; background: var(--panel-bg); border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: none; z-index: 1000; border-radius: var(--radius-sm); overflow: hidden; padding: 4px 0; min-width: 150px;}
@@ -71,6 +97,7 @@
             <span id="mode-display" style="color: #ffeb3b; font-weight: bold;">MODE: OFFLINE</span>
         </div>
         <div class="stat-group">
+            <button class="btn" style="background: #5f6368; color: white;" onclick="toggleTheme()">🌓</button>
             <button id="btn-connect" class="btn" style="background: #28a745; color: white;" onclick="if(window.backend) backend.js_toggle_backend()">🔌 CONNECT</button>
             <button class="btn" style="background: var(--accent);" onclick="if(window.backend) backend.js_open_plot_window()">📊SCOPE</button>
             <button class="btn" style="background: #6dd68f;" onclick="if(window.backend) backend.js_save_csv()">💾 SAVE CSV</button>
@@ -266,8 +293,7 @@
 
         function drawLines() {
             const svg = document.getElementById('svg-layer');
-            const markerHTML = `<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text)" /></marker></defs>`;
-            let pathHTML = '';
+            const markerHTML = `<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--line-stroke)" /></marker></defs>`;              let pathHTML = '';
 
             function route(d) {
                 pathHTML += `<path d="${d}" class="path-line" marker-end="url(#arrow)"></path>`;
@@ -377,7 +403,12 @@
             const filterUpper = filterText.toUpperCase();
             for (const [varName, info] of Object.entries(elfDataGlobal)) {
                 if (filterUpper && !varName.toUpperCase().includes(filterUpper)) continue;
-                listDiv.innerHTML += `<div class="elf-item"><span style="color:#fff;">${varName}</span><span style="color:#888;">${info.type}</span><span style="color:#a8c7fa;">${info.addr}</span><button class="elf-add-btn" onclick="addVarToActiveBlock('${varName}', '${info.addr}', '${info.type}')">Thêm</button></div>`;
+                listDiv.innerHTML += `<div class="elf-item">
+                    <span style="color: var(--text);">${varName}</span>
+                    <span style="color: var(--text-muted);">${info.type}</span>
+                    <span style="color: var(--accent);">${info.addr}</span>
+                    <button class="elf-add-btn" onclick="addVarToActiveBlock('${varName}', '${info.addr}', '${info.type}')">Thêm</button>
+                </div>`;
             }
         }
 
@@ -395,23 +426,26 @@
             vars.forEach(v => {
                 const isChecked = plottedVars.includes(v.id) ? 'checked' : '';
                 html += `<tr class="data-row" oncontextmenu="showContextMenu(event, 'var', '${v.id}')">
-                    <td style="text-align:center;">
-                        <input type="checkbox"
-                       class="plot-checkbox"
-                       data-varid="${v.id}"
-                       ${isChecked}
-                       onchange="event.stopPropagation(); togglePlot('${v.id}', this.checked)"
-                       onclick="event.stopPropagation()">
-                    </td>
-                    <td style="color:#fff; font-weight:bold;">${v.id}</td>
-                    <td style="color:#a8c7fa;">${v.type}</td>
-                    <td style="color:#888;">${v.addr}</td>
-                    <td class="val-read" id="read-${v.id}">0.00</td>
-                    <td>
-                        <input type="text" placeholder="Gõ số & Enter..." onclick="event.stopPropagation();"
-                               onkeydown="if(event.key === 'Enter') writeDataToMCU('${v.addr}', this.value, this, '${v.type}')">
-                    </td>
-                </tr>`;
+                <td style="text-align:center;">
+                    <input type="checkbox"
+                           class="plot-checkbox"
+                           data-varid="${v.id}"
+                           ${isChecked}
+                           onchange="togglePlot('${v.id}', this.checked)"
+                           onclick="event.stopPropagation()">
+                </td>
+                <td style="color: var(--text); font-weight:bold;">${v.id}</td>
+                <td style="color: var(--accent);">${v.type}</td>
+                <td style="color: var(--text-muted);">${v.addr}</td>
+
+                <td class="val-read" id="read-${v.id}">0.00</td>
+                <td>
+                    <input type="text"
+                           placeholder="Gõ số & Enter..."
+                           onclick="event.stopPropagation()"
+                           onkeydown="if(event.key === 'Enter') writeDataToMCU('${v.addr}', this.value, this, '${v.type}')">
+                </td>
+            </tr>`;
             });
             document.getElementById('prop-body').innerHTML = html || '<tr><td colspan="6" style="text-align:center; padding: 20px; color:#777">Chưa gán biến. Hãy chọn từ ELF Explorer ở trên.</td></tr>';
         }
@@ -500,6 +534,25 @@
         document.addEventListener('mouseup', () => { isResizingV = false; isResizingH = false; drawLines(); });
 
         window.addEventListener('resize', drawLines); setTimeout(drawLines, 200);
+
+        function toggleTheme() {
+            const htmlEl = document.documentElement;
+            const currentTheme = htmlEl.getAttribute('data-theme');
+
+            if (currentTheme === 'light') {
+                // Quay về chế độ Dark Mode mặc định
+                htmlEl.removeAttribute('data-theme');
+            } else {
+                // Chuyển sang Light Mode
+                htmlEl.setAttribute('data-theme', 'light');
+            }
+
+            // Kích hoạt vẽ lại sơ đồ kết nối để cập nhật màu sắc dây dẫn tức thời
+            if (typeof drawLines === 'function') {
+                drawLines();
+            }
+        }
+
     </script>
 </body>
 </html>
